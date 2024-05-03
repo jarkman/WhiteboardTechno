@@ -49,7 +49,9 @@ Serial.println("Starting");
     TimerCAM.Camera.sensor->set_pixformat(TimerCAM.Camera.sensor,
                                           PIXFORMAT_JPEG);
     TimerCAM.Camera.sensor->set_framesize(TimerCAM.Camera.sensor,
-                                          FRAMESIZE_SVGA);
+                                          FRAMESIZE_QVGA);   // 320x240 - works
+                                          //FRAMESIZE_SVGA );     // 800x600  is the defalt in this example - very stoppy but doesn't crash
+                                          // FRAMESIZE_QXGA);     // 2048x1536 is the max the camera can do - makes it crash
     TimerCAM.Camera.sensor->set_vflip(TimerCAM.Camera.sensor, 1);
     TimerCAM.Camera.sensor->set_hmirror(TimerCAM.Camera.sensor, 0);
 
