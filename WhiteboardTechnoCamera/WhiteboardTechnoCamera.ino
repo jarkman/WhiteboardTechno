@@ -17,12 +17,17 @@
 
 #include "I2CConstants.h"
 
+#include "Track.h"
+#include "Tune.h"
 
 const char* ssid     = "beetle";
 const char* password = "nomplasm";
 
 WiFiServer server(80);
 static void jpegStream(WiFiClient* client);
+
+
+Tune tune;
 
 void setup()
 {
@@ -83,6 +88,8 @@ bool doneDelayedSetup = false;
 
 void loop() {
 
+  tune.loop();
+  
    if( ! doneDelayedSetup )
     {
       doneDelayedSetup = true;
@@ -163,13 +170,3 @@ client_exit:
     Serial.printf("Image stream end\r\n");
 }
 
-
-void sendI2C(int target, byte *buf, int n)
-{
-
-  Wire.beginTransmission(target); 
-  Wire.write(buf, n);
-  
-  Wire.endTransmission();    // stop transmitting
-  
-}
