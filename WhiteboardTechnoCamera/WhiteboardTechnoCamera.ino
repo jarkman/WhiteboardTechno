@@ -15,6 +15,9 @@
 #include "M5TimerCAM.h"
 #include <WiFi.h>
 
+#include "I2CConstants.h"
+
+
 const char* ssid     = "beetle";
 const char* password = "nomplasm";
 
@@ -160,15 +163,13 @@ client_exit:
     Serial.printf("Image stream end\r\n");
 }
 
-byte x = 0;
 
-void sendI2C()
+void sendI2C(int target, byte *buf, int n)
 {
-  Serial.println(x);
-  Wire.beginTransmission(4); // transmit to device #4
-  Wire.write("x is ");        // sends five bytes
-  Wire.write(x);              // sends one byte  
+
+  Wire.beginTransmission(target); 
+  Wire.write(buf, n);
+  
   Wire.endTransmission();    // stop transmitting
-  x++;
-  delay(500);
+  
 }
