@@ -1,3 +1,6 @@
+#define CIRCULAR_BUFFER_INT_SAFE // turn on some interrupt safety in the buffer
+#include <CircularBuffer.hpp> // https://github.com/rlogiacco/CircularBuffer
+
 
 // build for Arduino Nano
 
@@ -45,6 +48,8 @@
 #define TD3_CHANNEL 2
 
 
+CircularBuffer<uint32_t,25> notes;
+
 #if defined(ARDUINO_SAM_DUE) || defined(SAMD_SERIES)
    /* example not relevant for this hardware (SoftwareSerial not supported) */
    MIDI_CREATE_DEFAULT_INSTANCE();
@@ -81,21 +86,13 @@ void setup()
 
 void loop()
 {
-  delay(1000);
-  Serial.println(".");
-}
-
-// function that executes whenever data is received from master
-// this function is registered as an event, see setup()
-void receiveEvent(int howMany)
-{
-  byte buf[3];
-
-  if( Wire.available() >= 3) 
+  
+  while( ! notes.isEmpty())
   {
-    buf[0] = Wire.read(); 
-    buf[1] = Wire.read(); 
-    buf[2] = Wire.read(); 
+  
+    uint32_t b = notes.shift();
+
+    byte *buf = (byte*) &b;
 
     if( buf[0] == MIDI_NOTE_OP)
     {
@@ -107,12 +104,34 @@ void receiveEvent(int howMany)
     else if( buf[0] == CV_OP)
     {
       ; //TODO
+      // buf[1] is the midi channel (1,2,3)
+      // buf[2] is the CV value, 0 to 254. 255 means no note, set gate to 0
     } 
     else
     {
       Serial.print("Bad i2c packet ");
       Serial.println((int)buf[0]);
     }
+  }
+}
+
+// function that executes whenever data is received from master
+// this function is registered as an event, see setup()
+void receiveEvent(int howMany)
+{
+  uint32_t b;
+  byte *buf = (byte*) &b;
+
+  if( Wire.available() >= 4) 
+  {
+    buf[0] = Wire.read(); 
+    buf[1] = Wire.read(); 
+    buf[2] = Wire.read(); 
+    buf[3] = Wire.read(); 
+
+    notes.push(b);
+
+    
   }
   
 }

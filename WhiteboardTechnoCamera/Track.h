@@ -84,9 +84,12 @@ void sendCv( int cv)
 {
   byte buf[4];
   buf[0]=CV_OP;
-  buf[1]=cv;
-  buf[2]=0;
+  buf[1]=midiChannel;
+  if( cv == -1 )
+    cv = 255;
+  buf[2]=cv;
   buf[3]=0;
+ 
 
   sendI2C(I2C_NANO, buf, 4);
 };
