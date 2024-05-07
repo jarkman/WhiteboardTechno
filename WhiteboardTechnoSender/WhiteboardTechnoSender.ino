@@ -34,18 +34,6 @@
 // or you can connect over USB and use Synthtribe to set channels
 
 
-// I made up these names, must be official ones
-#define RD6_CRASH 36
-#define RD6_CLAP 39
-#define RD6_BASH  40
-#define RD6_SHORT_CYMBAL 42
-#define RD6_BOINK 45
-#define RD6_MEDIUM_CYMBAL  46
-#define RD6_BINK 50
-#define RD6_LONG_CYMBAL 51
-
-#define RD6_CHANNEL 1
-#define TD3_CHANNEL 2
 
 
 CircularBuffer<uint32_t,25> notes;
