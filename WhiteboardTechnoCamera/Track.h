@@ -44,7 +44,7 @@ void drawBoxes()
 {
  if( drawMarkers )
   {
-    Serial.println("drawing markers");
+    //Serial.println("drawing markers");
     drawRect( x1+1, y1+1, width-1, height-1, colour);
   }
 }
@@ -70,7 +70,7 @@ void processBeat( int32_t beat, int32_t beatsPerLoop)//, Frame frame )
     sum += b;
     minB = min(b, minB);
     maxB = max( b, maxB);
-    Serial.printf("%d ", b);
+    //Serial.printf("%d ", b);
   }
 
   bool allWhite = false;
@@ -81,7 +81,7 @@ void processBeat( int32_t beat, int32_t beatsPerLoop)//, Frame frame )
   if( maxB - minB < threshold )
     allWhite = true;
 
-  Serial.printf("\nmax %d min %d mean %d threshold %d maxB-minB %d, allWhite %d\n", maxB, minB, sum/height, threshold, maxB-minB, allWhite);
+  //Serial.printf("\nmax %d min %d mean %d threshold %d maxB-minB %d, allWhite %d\n", maxB, minB, sum/height, threshold, maxB-minB, allWhite);
   
 
   bool inBlack = false;

@@ -1,6 +1,9 @@
 #define CIRCULAR_BUFFER_INT_SAFE // turn on some interrupt safety in the buffer
 #include <CircularBuffer.hpp> // https://github.com/rlogiacco/CircularBuffer
 
+#include <Wire.h>
+#include "I2CConstants.h"
+#include "MIDI.h"
 
 // build for Arduino Nano
 
@@ -13,9 +16,7 @@
 // SDA yellow
 // SCL white
 
-#include <Wire.h>
-#include "I2CConstants.h"
-#include "MIDI.h"
+
 // Midi sent on pin 3
 
 // Some 303 MIDI notes I don't understand: 
@@ -33,6 +34,17 @@
 
 // or you can connect over USB and use Synthtribe to set channels
 
+// PWM pins are 3, 5, 6, 9, 10, 11
+
+#define CV_OUT_1_PIN 9   // has a 16 bit timer, do we get 16 bit PWM ?
+                        // jack output via RC network, 1k / 10 uF
+
+#define CV_OUT_2_PIN 10
+#define CV_OUT_3_PIN 11
+
+#define GATE_OUT_1_PIN 5 // from thresholded CV out - jack output via 1k resistor
+#define GATE_OUT_2_PIN 6
+#define GATE_OUT_3_PIN 7
 
 
 
@@ -66,9 +78,11 @@ void setup()
 
   MIDI.begin();  
 
-  // should turn all the notes off really
-  for (int note = 36; note <= 51; note++)                 
-    MIDI.sendNoteOff(note, 0, TD3_CHANNEL);
+  // turn off all notes
+  for( int c = 1; c<=3; c ++)
+    MIDI.sendControlChange(123,0,c);
+
+  
 
 }
 
@@ -91,13 +105,55 @@ void loop()
     } 
     else if( buf[0] == CV_OP)
     {
-      ; //TODO
+      
       // buf[1] is the midi channel (1,2,3)
       // buf[2] is the CV value, 0 to 254. 255 means no note, set gate to 0
+      switch(buf[1])
+      {
+        case 1:
+          if( buf[2]=255)
+          {
+            digitalWrite( GATE_OUT_1_PIN, 0 );    
+          }
+          else
+          {
+            digitalWrite( GATE_OUT_1_PIN, 1 ); 
+            analogWrite(CV_OUT_1_PIN, buf[2]);
+          }
+          break;
+       case 2:
+          if( buf[2]=255)
+          {
+            digitalWrite( GATE_OUT_2_PIN, 0 );    
+          }
+          else
+          {
+            digitalWrite( GATE_OUT_2_PIN, 1 ); 
+            analogWrite(CV_OUT_2_PIN, buf[2]);
+          }
+          break;
+       case 3:
+          if( buf[2]=255)
+          {
+            digitalWrite( GATE_OUT_3_PIN, 0 );    
+          }
+          else
+          {
+            digitalWrite( GATE_OUT_3_PIN, 1 ); 
+            analogWrite(CV_OUT_3_PIN, buf[2]);
+          }
+          break;
+        default:
+          Serial.print("Bad channel for CV ");
+          Serial.println(buf[2]);
+          break;
+
+
+      }
     } 
     else
     {
-      Serial.print("Bad i2c packet ");
+      Serial.print("Bad i2c op ");
       Serial.println((int)buf[0]);
     }
   }
