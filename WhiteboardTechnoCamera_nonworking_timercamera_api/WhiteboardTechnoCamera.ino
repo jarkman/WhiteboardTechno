@@ -10,36 +10,13 @@
 //#include "esp_camera.h"
 
 #include <Wire.h>
-#include "esp_camera.h"
+#include "M5TimerCAM.h"
 #include <WiFi.h>
 
 #include "I2CConstants.h"
 
 #include "Track.h"
 #include "Tune.h"
-
-
-// ===================
-// Select camera model
-// ===================
-//#define CAMERA_MODEL_WROVER_KIT // Has PSRAM
-//#define CAMERA_MODEL_ESP_EYE // Has PSRAM
-//#define CAMERA_MODEL_ESP32S3_EYE // Has PSRAM
-//define CAMERA_MODEL_M5STACK_PSRAM // Has PSRAM   
-//#define CAMERA_MODEL_M5STACK_V2_PSRAM  // M5Camera version B  - this is what we build with for Sam Underwood
-//#define CAMERA_MODEL_M5STACK_WIDE // Has PSRAM
-//#define CAMERA_MODEL_M5STACK_ESP32CAM // No PSRAM
-#define CAMERA_MODEL_M5STACK_UNITCAM // No PSRAM
-//#define CAMERA_MODEL_AI_THINKER // Has PSRAM
-//#define CAMERA_MODEL_TTGO_T_JOURNAL // No PSRAM
-//#define CAMERA_MODEL_XIAO_ESP32S3 // Has PSRAM
-// ** Espressif Internal Boards **
-//#define CAMERA_MODEL_ESP32_CAM_BOARD
-//#define CAMERA_MODEL_ESP32S2_CAM_BOARD
-//#define CAMERA_MODEL_ESP32S3_CAM_LCD
-//#define CAMERA_MODEL_DFRobot_FireBeetle2_ESP32S3 // Has PSRAM
-//#define CAMERA_MODEL_DFRobot_Romeo_ESP32S3 // Has PSRAM
-#include "camera_pins.h"
 
 const char* ssid     = "beetle";
 const char* password = "nomplasm";
@@ -50,12 +27,12 @@ static void jpegStream(WiFiClient* client);
 
 Tune tune;
 
-bool doWifi = true;
+bool doWifi = false;
 
 void setup()
 {
   Wire.begin(4, 13); // join i2c bus - nonstandard pins for this board
-  Serial.begin(115200);
+  Serial.begin(9600);
   Serial.println("WhiteboardTechnoCamera");
   Serial.println("... waiting");
   delay(5000);
@@ -69,14 +46,38 @@ Serial.println("Starting");
 Serial.println("Starting");
 
 
-    setupCamera();
+    TimerCAM.begin();
 
+    //TimerCAM.Camera.config->fb_location = CAMERA_FB_IN_PSRAM;  
+
+    if (!TimerCAM.Camera.begin()) {
+        Serial.println("Camera Init Fail");
+        return;
+    }
     Serial.println("Camera Init Success");
 
     //TimerCAM.Camera.config->fb_location = CAMERA_FB_IN_PSRAM;  
     int res = -3;
 
-    
+    res = TimerCAM.Camera.sensor->set_pixformat(TimerCAM.Camera.sensor,
+                                          PIXFORMAT_RAW);
+                                          //PIXFORMAT_RGB888);  bad
+                                          //PIXFORMAT_RGB444); // gets an unsupported error message
+                                          //PIXFORMAT_GRAYSCALE); bad
+                                          //PIXFORMAT_RGB565); bad
+                                          //PIXFORMAT_JPEG); // good
+    Serial.println(res);
+    res = TimerCAM.Camera.sensor->set_framesize(TimerCAM.Camera.sensor,
+                              
+                                          FRAMESIZE_QVGA);   // 320x240 - works with PIXFORMAT_RGB444
+                                          //FRAMESIZE_VGA );    // not with 444
+                                          //FRAMESIZE_SVGA );     // 800x600  not with 444
+                                          // FRAMESIZE_QXGA);     // 2048x1536 is the max the camera can do - makes it crash
+    Serial.println(res);
+    //res = TimerCAM.Camera.sensor->set_vflip(TimerCAM.Camera.sensor, 1);
+    //Serial.println(res);
+    //res = TimerCAM.Camera.sensor->set_hmirror(TimerCAM.Camera.sensor, 0);
+    //Serial.println(res);
     
 
   if( doWifi )
@@ -101,106 +102,6 @@ Serial.println("Starting");
     server.begin();
   }
 }
-
-void setupCamera()
-{
-
-// https://www.reddit.com/r/esp32/comments/vndbh7/how_to_increase_fps_on_esp32cam/#:~:text=The%20internet%20advises%20setting%20it,the%20FPS%20the%20camera%20captures.
-
-  camera_config_t config;
-  config.ledc_channel = LEDC_CHANNEL_0;
-  config.ledc_timer = LEDC_TIMER_0;
-  config.pin_d0 = Y2_GPIO_NUM;
-  config.pin_d1 = Y3_GPIO_NUM;
-  config.pin_d2 = Y4_GPIO_NUM;
-  config.pin_d3 = Y5_GPIO_NUM;
-  config.pin_d4 = Y6_GPIO_NUM;
-  config.pin_d5 = Y7_GPIO_NUM;
-  config.pin_d6 = Y8_GPIO_NUM;
-  config.pin_d7 = Y9_GPIO_NUM;
-  config.pin_xclk = XCLK_GPIO_NUM;
-  config.pin_pclk = PCLK_GPIO_NUM;
-  config.pin_vsync = VSYNC_GPIO_NUM;
-  config.pin_href = HREF_GPIO_NUM;
-  config.pin_sccb_sda = SIOD_GPIO_NUM;
-  config.pin_sccb_scl = SIOC_GPIO_NUM;
-  config.pin_pwdn = PWDN_GPIO_NUM;
-  config.pin_reset = RESET_GPIO_NUM;
-  config.xclk_freq_hz = 20000000;
-  config.frame_size = FRAMESIZE_QQVGA;
-  //config.pixel_format = PIXFORMAT_JPEG; // for streaming
-  config.pixel_format = PIXFORMAT_RGB565;  // for face detection/recognition
-  config.grab_mode = CAMERA_GRAB_LATEST; //CAMERA_GRAB_WHEN_EMPTY;
-  config.fb_location = CAMERA_FB_IN_PSRAM;
-  config.jpeg_quality = 12;
-  config.fb_count = 2;
-
-#if CONFIG_IDF_TARGET_ESP32S3
-    config.fb_count = 2;
-#endif
-  
-
-#if defined(CAMERA_MODEL_ESP_EYE)
-  pinMode(13, INPUT_PULLUP);
-  pinMode(14, INPUT_PULLUP);
-#endif
-
-  // camera init
-  esp_err_t err = esp_camera_init(&config);
-  if (err != ESP_OK) {
-    Serial.printf("Camera init failed with error 0x%x", err);
-    return;
-  }
-
-  sensor_t *s = esp_camera_sensor_get();
-  // initial sensors are flipped vertically and colors are a bit saturated
-  if (s->id.PID == OV3660_PID) {
-    s->set_vflip(s, 1);        // flip it back
-    s->set_brightness(s, 1);   // up the brightness just a bit
-    s->set_saturation(s, -2);  // lower the saturation
-  }
-  
-
-#if defined(CAMERA_MODEL_M5STACK_WIDE) || defined(CAMERA_MODEL_M5STACK_ESP32CAM)
-  s->set_vflip(s, 1);
-  s->set_hmirror(s, 1);
-#endif
-
-#if defined(CAMERA_MODEL_ESP32S3_EYE)
-  s->set_vflip(s, 1);
-#endif
-
-// Setup LED FLash if LED pin is defined in camera_pins.h
-#if defined(LED_GPIO_NUM)
-  setupLedFlash(LED_GPIO_NUM);
-#endif
-
-
-  /*
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-  WiFi.begin(ssid, password);
-  WiFi.setSleep(false);
-
-  int status = 0;
-
-  while ((status = WiFi.status()) != WL_CONNECTED) {
-    delay(500);
-    Serial.print( status ); Serial.print(" ");
-  }
-  Serial.println("");
-  Serial.println("WiFi connected");
-
-  startCameraServer();
-
-  Serial.print("Camera Ready! Use 'http://");
-  Serial.print(WiFi.localIP());
-  Serial.println("' to connect");
-  */
-
-
-}
-
 
 long last_diags = 0;
 bool doneDelayedSetup = false;
@@ -272,7 +173,17 @@ void loop() {
         logStart();
         camera_fb_t *fb = NULL;
 
-        fb = esp_camera_fb_get();
+        int err = TimerCAM.Camera.get();
+
+        if (!err ) {
+          Serial.print("get err");
+          Serial.println(err);
+        }
+        
+        fb = TimerCAM.Camera.fb;
+
+
+        //fb = esp_camera_fb_get();
         esp_err_t res = ESP_OK;
         if (!fb) {
           Serial.println("Camera capture failed");
@@ -281,8 +192,11 @@ void loop() {
 
 
           process_frame(fb, "loop");
-          esp_camera_fb_return(fb);
+          //esp_camera_fb_return(fb);
           fb = NULL;
+
+        TimerCAM.Camera.free();
+
           logEnd();
         }
       }
@@ -290,22 +204,6 @@ void loop() {
     }
 }
 
-void setPixel(camera_fb_t *fb, int x, int y, uint16_t rgb) {
-  int byte = 2 * (fb->width * y + x);
-
-  uint8_t a = (rgb & 0xff00) >> 8;
-  uint8_t b = rgb & 0xff;
-
-  fb->buf[byte] = a;
-  fb->buf[byte + 1] = b;
-}
-
-void drawMarker(camera_fb_t *fb, int x0, int y0, uint16_t rgb) {
-  for (int y = y0-4; y < y0+4; y++)
-    for (int x = x0 - 4; x <= x0 + 4; x++) {
-      setPixel(fb, x, y, rgb);
-    }
-}
 
 void process_frame(camera_fb_t *fb, char *at) {
   //Serial.println(at);
@@ -327,9 +225,6 @@ void process_frame(camera_fb_t *fb, char *at) {
   Serial.println(fb->width);
   Serial.print("format ");
   Serial.println(fb->format);
-
-  drawMarker(fb, 4,4, 0xf000);
-  drawMarker(fb, fb->width-4, fb->height-4, 0x000f);
 
 }
 
@@ -369,9 +264,6 @@ static const char* _STREAM_PART =
     "Content-Type: image/x-windows-bmp\r\nContent-Length: %u\r\n\r\n";
 
 static void bmpStream(WiFiClient* client) {
-   camera_fb_t *fb = NULL;
-
-
     Serial.println("Image stream start");
     client->println("HTTP/1.1 200 OK");
     client->printf("Content-Type: %s\r\n", _STREAM_CONTENT_TYPE);
@@ -385,17 +277,17 @@ static void bmpStream(WiFiClient* client) {
 
     for (;;) {
         Serial.println("before get");
-       
-        fb = esp_camera_fb_get();
-        esp_err_t res = ESP_OK;
-        if (!fb) {
-          Serial.println("Camera capture failed");
-          res = ESP_FAIL;
-        } else {
-            Serial.printf("pic size: %d\n", fb->len);
+        int err = TimerCAM.Camera.get();
 
-
-            process_frame(fb, "stream");
+        if (!err ) {
+          Serial.print("get err");
+          Serial.println(err);
+        }
+        else
+        {
+          Serial.println("after get");
+            TimerCAM.Power.setLed(255);
+            Serial.printf("pic size: %d\n", TimerCAM.Camera.fb->len);
 
             client->print(_STREAM_BOUNDARY);
 
@@ -403,9 +295,7 @@ static void bmpStream(WiFiClient* client) {
 
             uint8_t * buf = NULL;
             size_t buf_len = 0;
-            bool converted = frame2bmp(fb, &buf, &buf_len);
-
-            Serial.println("made bmp");
+            bool converted = frame2bmp(TimerCAM.Camera.fb, &buf, &buf_len);
             //esp_camera_fb_return(fb);
             if(!converted){
                 log_e("BMP Conversion failed");
@@ -417,7 +307,6 @@ static void bmpStream(WiFiClient* client) {
 
             client->printf(_STREAM_PART,buf_len);
             
-            Serial.println("sending");
             int32_t to_sends    = buf_len;
             int32_t now_sends   = 0;
             uint8_t* out_buf    = buf;
@@ -435,23 +324,21 @@ static void bmpStream(WiFiClient* client) {
             int64_t frame_time = fr_end - last_frame;
             last_frame         = fr_end;
             frame_time /= 1000;
-
-            Serial.println("sent");
-
             Serial.printf("MJPG: %luKB %lums (%.1ffps)\r\n",
                           (long unsigned int)(buf_len / 1024),
                           (long unsigned int)frame_time,
                           1000.0 / (long unsigned int)frame_time);
 
-            
-            esp_camera_fb_return(fb);
+            TimerCAM.Camera.free();
+            TimerCAM.Power.setLed(0);
             free(buf);
         }
 
     }
 
 client_exit:
-   esp_camera_fb_return(fb);
+    TimerCAM.Camera.free();
+    TimerCAM.Power.setLed(0);
     client->stop();
     Serial.printf("Image stream end\r\n");
 }
