@@ -2,6 +2,12 @@
 
 #include "I2CConstants.h"
 
+extern bool drawMarkers;
+extern camera_fb_t *fb;
+void drawRect(int x0, int y0, int w, int h, uint16_t rgb);
+void drawMarker(int x0, int y0, uint16_t rgb);
+uint32_t pixelBrightness( int x, int y );
+
 class Track {
 
 public:
@@ -11,6 +17,7 @@ int x1;
 int y1;
 int width;
 int height;
+uint32_t colour;
 int numNoteNumbers;
 int *noteNumbers;
 // something about quantisation
@@ -20,20 +27,30 @@ int *noteNumbers;
 bool notes[MAX_NOTES];
 int lastCv = -1;
 
-Track(int _midiChannel, int _x1, int _y1, int _width, int _height, int _numNoteNumbers, int *_noteNumbers)
+Track(int _midiChannel, int _x1, int _y1, int _width, int _height, uint32_t _colour, int _numNoteNumbers, int *_noteNumbers)
 {
   midiChannel - _midiChannel;
   x1 = _x1;
   y1 = _y1;
+  width = _width;
   height = _height;
+  colour = _colour;
   numNoteNumbers = _numNoteNumbers;
   noteNumbers = _noteNumbers;
 
 };
 
+void drawBoxes()
+{
+ if( drawMarkers )
+  {
+    Serial.println("drawing markers");
+    drawRect( x1+1, y1+1, width-1, height-1, colour);
+  }
+}
 void processBeat( int32_t beat, int32_t beatsPerLoop)//, Frame frame )
 {
-  
+ 
   bool newNotes[MAX_NOTES];
 
   double x = map(beat, 0, beatsPerLoop-1, x1, x1 + width );
@@ -43,14 +60,66 @@ void processBeat( int32_t beat, int32_t beatsPerLoop)//, Frame frame )
 
   int cv = -1;
 
+  uint32_t sum = 0;
+  uint32_t minB = 0xFFFFFFFF;
+  uint32_t maxB = 0;
+
   for(int y = y1; y < y1 + height; y ++)
   {
-    // scan the vertical line at x
-    // if we detect a black bit, find the middle
-    int centerY = 3;
-    int pos = ((centerY - y1) * numNoteNumbers) / height;
-    cv =   ((centerY - y1) * CV_MAX) / height;
-    newNotes[pos] = true;
+    uint32_t b = pixelBrightness(x,y);
+    sum += b;
+    minB = min(b, minB);
+    maxB = max( b, maxB);
+    Serial.printf("%d ", b);
+  }
+
+  bool allWhite = false;
+
+  uint32_t threshold = (maxB+minB)/3;
+
+  
+  if( maxB - minB < threshold )
+    allWhite = true;
+
+  Serial.printf("\nmax %d min %d mean %d threshold %d maxB-minB %d, allWhite %d\n", maxB, minB, sum/height, threshold, maxB-minB, allWhite);
+  
+
+  bool inBlack = false;
+  int blackStart = -1;
+
+  if( ! allWhite )
+  {
+  // scan the vertical line at x
+    for(int y = y1; y < y1 + height+1; y ++) // do 1 extra px to let is finish the last bit
+    {
+
+      uint32_t b;
+      
+      if( y < y1+height )
+        b = pixelBrightness(x,y);
+      else
+        b = threshold+1; // fake last pix which is white
+
+      if( ! inBlack && b <= threshold )
+      {
+        inBlack = true;
+        blackStart = y;
+      }
+      else if( inBlack && b > threshold )
+      {
+        // if we detect a black bit, find the middle
+
+        inBlack = false;
+        int centerY = (y+blackStart)/2;
+        int pos = height - (((centerY - y1) * numNoteNumbers) / height);  // y==0 is at the top here
+        cv =   ((centerY - y1) * CV_MAX) / height;
+        newNotes[pos] = true;
+
+        if( drawMarkers)
+          drawMarker(x, centerY, colour);
+      }
+    
+    }
   }
 
   for( int n = 0; n < numNoteNumbers; n ++)

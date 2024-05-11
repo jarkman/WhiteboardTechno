@@ -51,6 +51,11 @@ static void jpegStream(WiFiClient* client);
 Tune tune;
 
 bool doWifi = true;
+bool drawMarkers = true;
+
+bool streamRunning = false;
+
+camera_fb_t *fb = NULL;
 
 void setup()
 {
@@ -127,8 +132,9 @@ void setupCamera()
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
-  config.frame_size = FRAMESIZE_QQVGA;
-  //config.pixel_format = PIXFORMAT_JPEG; // for streaming
+  config.frame_size = FRAMESIZE_QQVGA;  // 160x120 - works for streaming
+  // config.frame_size = FRAMESIZE_QVGA; //causes all kinds of slowness when streaming
+  
   config.pixel_format = PIXFORMAT_RGB565;  // for face detection/recognition
   config.grab_mode = CAMERA_GRAB_LATEST; //CAMERA_GRAB_WHEN_EMPTY;
   config.fb_location = CAMERA_FB_IN_PSRAM;
@@ -176,29 +182,6 @@ void setupCamera()
 #endif
 
 
-  /*
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-  WiFi.begin(ssid, password);
-  WiFi.setSleep(false);
-
-  int status = 0;
-
-  while ((status = WiFi.status()) != WL_CONNECTED) {
-    delay(500);
-    Serial.print( status ); Serial.print(" ");
-  }
-  Serial.println("");
-  Serial.println("WiFi connected");
-
-  startCameraServer();
-
-  Serial.print("Camera Ready! Use 'http://");
-  Serial.print(WiFi.localIP());
-  Serial.println("' to connect");
-  */
-
-
 }
 
 
@@ -235,7 +218,7 @@ void loop() {
     }
 
 
-    tune.loop();
+    
 
     if( doWifi )
     {
@@ -251,7 +234,8 @@ void loop() {
           Serial.println("Client Disconnected.");
       }
     }
-    else
+
+    if( ! streamRunning )
     {
       long interval;
 
@@ -270,7 +254,12 @@ void loop() {
         lastFrameMillis = now;
       
         logStart();
-        camera_fb_t *fb = NULL;
+        
+        if( fb != NULL )
+        {
+          esp_camera_fb_return(fb);
+          fb = NULL;
+        }
 
         fb = esp_camera_fb_get();
         esp_err_t res = ESP_OK;
@@ -280,17 +269,44 @@ void loop() {
         } else {
 
 
-          process_frame(fb, "loop");
-          esp_camera_fb_return(fb);
-          fb = NULL;
+          processFrame("loop");
+         
           logEnd();
         }
       }
 
     }
+
+    tune.loop();
+
+
+   
 }
 
-void setPixel(camera_fb_t *fb, int x, int y, uint16_t rgb) {
+uint32_t pixelBrightness( int x, int y )
+{
+  int byte = 2 * (fb->width * y + x);
+
+  uint8_t *pix_address = fb->buf + byte;
+
+  uint16_t m = *((uint16_t *)pix_address);
+  uint16_t pix = (m & 0xff) << 8 | ((m >> 8) & 0xff);  // swap the bytes
+  
+  int red = (pix >> 11) & 0b0011111;
+  int green = ((pix >> 5) & 0b0111111) / 2;  // divide by 2 to normalise
+  int blue = (pix >> 0) & 0b0011111;
+
+  
+  return (red+green+blue)/3;
+}
+
+
+void setPixel(int x, int y, uint16_t rgb) {
+  if( x < 0 || y < 0 || x > fb->width || y > fb->height)
+  {
+    Serial.printf("Bad xy (%d, %d vs %d, %d) in setPixel\n", x, y, fb->width, fb->height);
+    return;
+  }
   int byte = 2 * (fb->width * y + x);
 
   uint8_t a = (rgb & 0xff00) >> 8;
@@ -300,14 +316,30 @@ void setPixel(camera_fb_t *fb, int x, int y, uint16_t rgb) {
   fb->buf[byte + 1] = b;
 }
 
-void drawMarker(camera_fb_t *fb, int x0, int y0, uint16_t rgb) {
-  for (int y = y0-4; y < y0+4; y++)
-    for (int x = x0 - 4; x <= x0 + 4; x++) {
-      setPixel(fb, x, y, rgb);
+void drawRect(int x0, int y0, int w, int h, uint16_t rgb) {
+
+  for (int y = y0; y < y0+h; y++)
+  {
+    setPixel(x0, y, rgb);
+    setPixel(x0+w, y, rgb);
+  }
+  for (int x = x0; x < x0+w; x++)
+  {
+    setPixel(x, y0, rgb);
+    setPixel( x, y0+h, rgb);
+  }
+    
+}
+
+
+void drawMarker(int x0, int y0, uint16_t rgb) {
+  for (int y = y0-1; y < y0+1; y++)
+    for (int x = x0 - 1; x <= x0 + 1; x++) {
+      setPixel(x, y, rgb);
     }
 }
 
-void process_frame(camera_fb_t *fb, char *at) {
+void processFrame( char *at) {
   //Serial.println(at);
   // uint8_t * buf;
   //size_t len;                 /*!< Length of the buffer in bytes */
@@ -319,6 +351,11 @@ void process_frame(camera_fb_t *fb, char *at) {
   Serial.print("processFrame ");
   Serial.println(at);
 
+  if( fb == NULL )
+  {
+    Serial.println("No frame!");
+    return;
+  }
   Serial.print("len ");
   Serial.println(fb->len);
   Serial.print("height ");
@@ -328,9 +365,10 @@ void process_frame(camera_fb_t *fb, char *at) {
   Serial.print("format ");
   Serial.println(fb->format);
 
-  drawMarker(fb, 4,4, 0xf000);
-  drawMarker(fb, fb->width-4, fb->height-4, 0x000f);
+  drawMarker(4,4, 0xf000);
+  drawMarker(fb->width-4, fb->height-4, 0x000f);
 
+  
 }
 
 void plotLines(int width, int pos)
@@ -369,8 +407,9 @@ static const char* _STREAM_PART =
     "Content-Type: image/x-windows-bmp\r\nContent-Length: %u\r\n\r\n";
 
 static void bmpStream(WiFiClient* client) {
-   camera_fb_t *fb = NULL;
 
+
+    streamRunning = true;
 
     Serial.println("Image stream start");
     client->println("HTTP/1.1 200 OK");
@@ -386,6 +425,12 @@ static void bmpStream(WiFiClient* client) {
     for (;;) {
         Serial.println("before get");
        
+        if( fb != NULL )
+        {
+          esp_camera_fb_return(fb);
+          fb = NULL;
+        }
+
         fb = esp_camera_fb_get();
         esp_err_t res = ESP_OK;
         if (!fb) {
@@ -395,7 +440,8 @@ static void bmpStream(WiFiClient* client) {
             Serial.printf("pic size: %d\n", fb->len);
 
 
-            process_frame(fb, "stream");
+            processFrame("stream");
+            tune.process(); // to make markers to show
 
             client->print(_STREAM_BOUNDARY);
 
@@ -444,15 +490,17 @@ static void bmpStream(WiFiClient* client) {
                           1000.0 / (long unsigned int)frame_time);
 
             
-            esp_camera_fb_return(fb);
+           
             free(buf);
         }
 
     }
 
 client_exit:
-   esp_camera_fb_return(fb);
+   
     client->stop();
     Serial.printf("Image stream end\r\n");
+
+    streamRunning = false;
 }
 
