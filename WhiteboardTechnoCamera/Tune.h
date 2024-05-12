@@ -64,20 +64,20 @@ class Tune{
   Tune()
   {
     int b = 0;
-    int o = 1;
+    int o = 2;
     for(int i = 0; i < sizeof( bassNotes ); i ++)
     {
       bassNotes[i] = (o*12) + bluesCMajor[b];
       b++;
       if( b >= sizeof( bluesCMajor ))
       {
-        b = 0;
+        b = 0;            
         o++;
       }
     }
 
     b = 0;
-    o = 2;
+    o = 1;
     for(int i = 0; i < sizeof( leadNotes ); i ++)
     {
       leadNotes[i] = (o*12) + bluesCMajor[b];
