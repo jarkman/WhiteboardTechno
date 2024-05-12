@@ -6,9 +6,11 @@
 #include "MIDI.h"
 
 // build for Arduino Nano
+// Processor 328P Old Bootloader
 
 // Receives i2c data from WhiteboardTechnoCamera, sends it as MIDI and CV
 
+// I2C is wired via a Sparkfun level shifter
 // A4 SDA
 // A5 SCL
 
@@ -17,7 +19,9 @@
 // SCL white
 
 
-// Midi sent on pin 3
+// Midi sent on pin 3, wired directly to pin 5 on the MIDI socket - red core on my cable
+// 5V is wired via a 220ohm resistor to pin 4 - white core
+// Ground is wired directly to pin 2 - cable screen
 
 // Some 303 MIDI notes I don't understand: 
 // https://antonsavov.net/articles/303andmidi/
@@ -35,6 +39,9 @@
 // or you can connect over USB and use Synthtribe to set channels
 
 // PWM pins are 3, 5, 6, 9, 10, 11
+
+#define MIDI_TX_PIN 3
+#define MIDI_RX_PIN 2 // not doing any receiving here, leave disconnected
 
 #define CV_OUT_1_PIN 9   // has a 16 bit timer, do we get 16 bit PWM ?
                         // jack output via RC network, 1k / 10 uF
@@ -56,8 +63,8 @@ CircularBuffer<uint32_t,25> notes;
 #else
    #include <SoftwareSerial.h>
    using Transport = MIDI_NAMESPACE::SerialMIDI<SoftwareSerial>;
-   int rxPin = 2;
-   int txPin = 3;
+   int rxPin = MIDI_RX_PIN;
+   int txPin = MIDI_TX_PIN;
    SoftwareSerial mySerial = SoftwareSerial(rxPin, txPin);
    Transport serialMIDI(mySerial);
    MIDI_NAMESPACE::MidiInterface<Transport> MIDI((Transport&)serialMIDI);
@@ -69,18 +76,33 @@ void setup()
 {
   Wire.begin(I2C_NANO);                // join i2c bus with address #4
   Wire.onReceive(receiveEvent); // register event
-  Serial.begin(9600);           // start serial for output
+  Serial.begin(115200);           // start serial for output
   Serial.println("slave receiver");
   
   Serial.println("... waiting");
   delay(5000);
   Serial.println("..waited");
 
+
+  pinMode(GATE_OUT_1_PIN, OUTPUT);
+  pinMode(GATE_OUT_2_PIN, OUTPUT);
+  pinMode(GATE_OUT_3_PIN, OUTPUT);
+
   MIDI.begin();  
 
   // turn off all notes
   for( int c = 1; c<=3; c ++)
     MIDI.sendControlChange(123,0,c);
+
+/*
+// midi test
+  for( int n = 0; n < 127; n ++)
+  {
+    MIDI.sendNoteOn(n, 127, 3);    
+    Serial.println(n);
+    delay(1000);
+  }
+  */
 
   
 
@@ -94,14 +116,28 @@ void loop()
   
     uint32_t b = notes.shift();
 
+    Serial.print("popped "); Serial.println(b, HEX);
+
     byte *buf = (byte*) &b;
 
     if( buf[0] == MIDI_NOTE_OP)
     {
       if( buf[3])
+      {
+        Serial.print("On ch ");
+        Serial.print(buf[1]);
+        Serial.print(" note ");
+        Serial.println(buf[2]);
         MIDI.sendNoteOn(buf[2], 127, buf[1]);    
+      }
       else
-        MIDI.sendNoteOff(buf[2], 127, buf[1]); 
+       {
+        Serial.print("Off ch ");
+        Serial.print(buf[1]);
+        Serial.print(" note ");
+        Serial.println(buf[2]);
+        MIDI.sendNoteOff(buf[2], 127, buf[1]);    
+      }
     } 
     else if( buf[0] == CV_OP)
     {
@@ -145,7 +181,7 @@ void loop()
           break;
         default:
           Serial.print("Bad channel for CV ");
-          Serial.println(buf[2]);
+          Serial.println(buf[1]);
           break;
 
 
@@ -173,6 +209,8 @@ void receiveEvent(int howMany)
     buf[2] = Wire.read(); 
     buf[3] = Wire.read(); 
 
+
+    //Serial.print("rec "); Serial.println(b, HEX);
     notes.push(b);
 
     

@@ -247,7 +247,6 @@ void loop() {
         // this was improved a bit by config.grab_mode = CAMERA_GRAB_LATEST; 
         // and config.fb_count = 2;
 
-      delay( interval );
       long now = millis();
       if( now - lastFrameMillis > interval )
       {
@@ -347,6 +346,9 @@ void processFrame( char *at) {
   //  size_t height;              /*!< Height of the buffer in pixels */
   //  pixformat_t format;         /*!< F
 
+
+return;
+
   
   Serial.print("processFrame ");
   Serial.println(at);
@@ -423,7 +425,7 @@ static void bmpStream(WiFiClient* client) {
     }
 
     for (;;) {
-        Serial.println("before get");
+        //Serial.println("before get");
        
         if( fb != NULL )
         {
@@ -437,7 +439,7 @@ static void bmpStream(WiFiClient* client) {
           Serial.println("Camera capture failed");
           res = ESP_FAIL;
         } else {
-            Serial.printf("pic size: %d\n", fb->len);
+            //Serial.printf("pic size: %d\n", fb->len);
 
 
             processFrame("stream");
@@ -451,7 +453,7 @@ static void bmpStream(WiFiClient* client) {
             size_t buf_len = 0;
             bool converted = frame2bmp(fb, &buf, &buf_len);
 
-            Serial.println("made bmp");
+            //Serial.println("made bmp");
             //esp_camera_fb_return(fb);
             if(!converted){
                 log_e("BMP Conversion failed");
@@ -463,7 +465,7 @@ static void bmpStream(WiFiClient* client) {
 
             client->printf(_STREAM_PART,buf_len);
             
-            Serial.println("sending");
+            //Serial.println("sending");
             int32_t to_sends    = buf_len;
             int32_t now_sends   = 0;
             uint8_t* out_buf    = buf;
@@ -481,7 +483,7 @@ static void bmpStream(WiFiClient* client) {
             int64_t frame_time = fr_end - last_frame;
             last_frame         = fr_end;
             frame_time /= 1000;
-
+/*
             Serial.println("sent");
 
             Serial.printf("MJPG: %luKB %lums (%.1ffps)\r\n",
@@ -489,7 +491,7 @@ static void bmpStream(WiFiClient* client) {
                           (long unsigned int)frame_time,
                           1000.0 / (long unsigned int)frame_time);
 
-            
+  */          
            
             free(buf);
         }

@@ -19,7 +19,7 @@ int width;
 int height;
 uint32_t colour;
 int numNoteNumbers;
-int *noteNumbers;
+uint8_t *noteNumbers;
 // something about quantisation
 
 
@@ -27,9 +27,9 @@ int *noteNumbers;
 bool notes[MAX_NOTES];
 int lastCv = -1;
 
-Track(int _midiChannel, int _x1, int _y1, int _width, int _height, uint32_t _colour, int _numNoteNumbers, int *_noteNumbers)
+Track(int _midiChannel, int _x1, int _y1, int _width, int _height, uint32_t _colour, int _numNoteNumbers, uint8_t *_noteNumbers)
 {
-  midiChannel - _midiChannel;
+  midiChannel = _midiChannel;
   x1 = _x1;
   y1 = _y1;
   width = _width;
@@ -111,9 +111,20 @@ void processBeat( int32_t beat, int32_t beatsPerLoop)//, Frame frame )
 
         inBlack = false;
         int centerY = (y+blackStart)/2;
-        int pos = height - (((centerY - y1) * numNoteNumbers) / height);  // y==0 is at the top here
+        int pos = ((centerY - y1) * numNoteNumbers)  / height;  // y==0 is at the top here
+        pos = numNoteNumbers - pos;
+
         cv =   ((centerY - y1) * CV_MAX) / height;
-        newNotes[pos] = true;
+
+        if( pos < 0 || pos > numNoteNumbers)
+        {
+          Serial.printf("Bad pos %d (not 0-%d)", pos, numNoteNumbers);
+        }
+        else
+        {
+          newNotes[pos] = true;
+          //Serial.printf("found note channel %d at pos %d noteNumber %d\n", midiChannel, pos, noteNumbers[pos]);
+        }
 
         if( drawMarkers)
           drawMarker(x, centerY, colour);
@@ -157,6 +168,9 @@ void sendNote( int noteNumber, bool start)
 
 void sendCv( int cv)
 {
+
+  return;
+
   byte buf[4];
   buf[0]=CV_OP;
   buf[1]=midiChannel;
@@ -172,7 +186,12 @@ void sendCv( int cv)
 
 void sendI2C(int target, byte *buf, int n)
 {
-
+/*
+  Serial.print(">>>>>>>>>>>>>>>>>>>>sent ");
+  for( int i = 0; i < 4; i ++ )
+    Serial.print(buf[i], HEX);
+  Serial.println();
+  */
   Wire.beginTransmission(target); 
   Wire.write(buf, n);
   
