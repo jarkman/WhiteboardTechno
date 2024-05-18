@@ -52,6 +52,7 @@ void processBeat( int32_t beat, int32_t beatsPerLoop)//, Frame frame )
 {
  
   bool newNotes[MAX_NOTES];
+  bool velocities[MAX_NOTES];
 
   double x = map(beat, 0, beatsPerLoop-1, x1, x1 + width );
 
@@ -110,6 +111,8 @@ void processBeat( int32_t beat, int32_t beatsPerLoop)//, Frame frame )
         // if we detect a black bit, find the middle
 
         inBlack = false;
+        int h = y-blackStart;
+        int velocity = map(h,0,height/8,50,127); // full velocity at 1/8 of panel height
         int centerY = (y+blackStart)/2;
         int pos = ((centerY - y1) * numNoteNumbers)  / height;  // y==0 is at the top here
         pos = numNoteNumbers - pos;
@@ -123,6 +126,7 @@ void processBeat( int32_t beat, int32_t beatsPerLoop)//, Frame frame )
         else
         {
           newNotes[pos] = true;
+          velocities[pos] = velocity;
           //Serial.printf("found note channel %d at pos %d noteNumber %d\n", midiChannel, pos, noteNumbers[pos]);
         }
 
@@ -136,9 +140,9 @@ void processBeat( int32_t beat, int32_t beatsPerLoop)//, Frame frame )
   for( int n = 0; n < numNoteNumbers; n ++)
   {
     if( ! notes[n] && newNotes[n])
-      sendNote(n, true);
+      sendNote(n, true, velocities[n]);
     else if( notes[n] && ! newNotes[n])
-      sendNote(n, false);
+      sendNote(n, false,127);
   }
 
   for( int n = 0; n < numNoteNumbers; n ++)
@@ -150,7 +154,7 @@ void processBeat( int32_t beat, int32_t beatsPerLoop)//, Frame frame )
 
 
 
-void sendNote( int noteNumber, bool start)
+void sendNote( int noteNumber, bool start, int velocity)
 {
   if( noteNumber >= numNoteNumbers )
   {
@@ -158,10 +162,14 @@ void sendNote( int noteNumber, bool start)
     return;
   }
   byte buf[4];
-  buf[0]=MIDI_NOTE_OP;
+  if( start )
+    buf[0]=MIDI_START_NOTE_OP;
+  else
+    buf[0]=MIDI_STOP_NOTE_OP;
+
   buf[1]=midiChannel;
   buf[2]=noteNumbers[noteNumber];
-  buf[3]=start;
+  buf[3]=velocity;
 
   sendI2C(I2C_NANO, buf, 4);
 };

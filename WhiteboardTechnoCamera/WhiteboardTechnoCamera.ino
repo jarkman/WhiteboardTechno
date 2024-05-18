@@ -443,7 +443,7 @@ static void bmpStream(WiFiClient* client) {
 
 
             processFrame("stream");
-            tune.process(); // to make markers to show
+            tune.process(true); // to make markers to show
 
             client->print(_STREAM_BOUNDARY);
 

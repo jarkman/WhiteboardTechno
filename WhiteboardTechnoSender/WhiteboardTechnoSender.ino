@@ -120,24 +120,24 @@ void loop()
 
     byte *buf = (byte*) &b;
 
-    if( buf[0] == MIDI_NOTE_OP)
+    if( buf[0] == MIDI_START_NOTE_OP)
     {
-      if( buf[3])
-      {
-        Serial.print("On ch ");
-        Serial.print(buf[1]);
-        Serial.print(" note ");
-        Serial.println(buf[2]);
-        MIDI.sendNoteOn(buf[2], 127, buf[1]);    
-      }
-      else
-       {
-        Serial.print("Off ch ");
-        Serial.print(buf[1]);
-        Serial.print(" note ");
-        Serial.println(buf[2]);
-        MIDI.sendNoteOff(buf[2], 127, buf[1]);    
-      }
+
+      Serial.print("On ch ");
+      Serial.print(buf[1]);
+      Serial.print(" note ");
+      Serial.println(buf[2]);
+      Serial.print(" vel ");
+      Serial.println(buf[3]);
+      MIDI.sendNoteOn(buf[2], buf[3], buf[1]);    
+    }
+    else if( buf[0] == MIDI_STOP_NOTE_OP)
+    {
+      Serial.print("Off ch ");
+      Serial.print(buf[1]);
+      Serial.print(" note ");
+      Serial.println(buf[2]);
+      MIDI.sendNoteOff(buf[2], buf[3], buf[1]);    
     } 
     else if( buf[0] == CV_OP)
     {

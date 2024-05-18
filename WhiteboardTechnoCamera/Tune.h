@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Setting.h"
 
 #define RD6_BASS_DRUM 36
 #define RD6_SNARE_DRUM 40
@@ -15,21 +16,27 @@
 
 
 uint8_t drumNotes[] = {RD6_BASS_DRUM,RD6_SNARE_DRUM,RD6_LOW_TOM,RD6_CLAP,RD6_CLOSED_HAT};
-uint8_t bassLinear[] = {20,21,22,23,24,25,26,27,28,29,30,31,32,33};
-uint8_t leadLinear[] = {24,25,26,27,28,29,30,31,32,33,34,35,36,37};  // ove 37 doesn't seem to work the Crave properly ? 
+//uint8_t bassLinear[] = {20,21,22,23,24,25,26,27,28,29,30,31,32,33};
+//uint8_t leadLinear[] = {24,25,26,27,28,29,30,31,32,33,34,35,36,37};  // over 37 doesn't seem to work the Crave properly ? 
 
                   // C D D# E G A
-uint8_t bluesCMajor[] = { 0, 2, 3, 4, 7, 9 };
+uint8_t bluesCMajorScale[] = { 0, 2, 3, 4, 7, 9 };
 
                   // C Eb F F# G Bb
-uint8_t bluesCMinor[] = {0, };
+uint8_t bluesCMinorScale[] = {0, 3, 5, 6, 7, 10 };
 
+uint8_t straightScale[] = {0,1,2,3,4,5,6,7,8,9,10,11 };
+
+// settings lookup values
+int bpls[] = {16,32,64};
+int bpms[] = {90,95,100,105,110,115,120,125,130,135};
+int scales[] = {0,1,2};
 
 uint8_t bassNotes[12];  // 20 to 33 is a known good range
 uint8_t leadNotes[12];  // 24 to 37 is good ? 
 
-extern bool drawMarkers;
-extern camera_fb_t *fb;
+//extern bool drawMarkers;
+//extern camera_fb_t *fb;
 void drawRect(camera_fb_t *fb, int x0, int y0, int w, int h, uint16_t rgb);
 
 
@@ -53,23 +60,36 @@ class Tune{
                           Track(TD3_CHANNEL,x0, y0+h+yspace,       xmax-x0,h, 0xf000, 12, (uint8_t*)bassNotes), 
                           Track(3,          x0, y0,               xmax-x0,h,  0x000f, 12, (uint8_t*)leadNotes)};
 
+  int settingX = 13;
+  int settingWidth = 5;
+
+  Setting beatPerLoopSetting =  Setting("beatsPerLoop", settingX, y0+2*h+2*yspace, settingWidth,h,0xf00f,3,bpls);
+  Setting BPMSetting =          Setting("BPM",          settingX, y0+h+yspace,     settingWidth,h,0x00ff,10,bpms);
+  Setting scaleSetting =        Setting("scale",        settingX, y0,              settingWidth,h,0xff00,3,scales);
+
   double BPM = 120;
   //double nominalBeats = 64;
   int lastBeat = -1;
   uint32_t beatsPerLoop = 64;
-  uint32_t loopDurationMillis = 8000;
+  uint32_t beatDurationMillis = 8000;
   uint32_t loopStartMillis = 0;
+  int32_t beat = 0;
 
 
   Tune()
   {
+    setScales(2,1,bluesCMajorScale, sizeof(bluesCMajorScale));
+  };
+
+  void setScales(int bassOctave, int leadOctave, uint8_t *noteList, int size)
+  {
     int b = 0;
-    int o = 2;
+    int o = bassOctave;
     for(int i = 0; i < sizeof( bassNotes ); i ++)
     {
-      bassNotes[i] = (o*12) + bluesCMajor[b];
+      bassNotes[i] = (o*12) + noteList[b];
       b++;
-      if( b >= sizeof( bluesCMajor ))
+      if( b >= size)
       {
         b = 0;            
         o++;
@@ -77,12 +97,12 @@ class Tune{
     }
 
     b = 0;
-    o = 1;
+    o = leadOctave;
     for(int i = 0; i < sizeof( leadNotes ); i ++)
     {
-      leadNotes[i] = (o*12) + bluesCMajor[b];
+      leadNotes[i] = (o*12) + noteList[b];
       b++;
-      if( b >= sizeof( bluesCMajor ))
+      if( b >= size)
       {
         b = 0;
         o++;
@@ -92,38 +112,42 @@ class Tune{
 
   void loop()
   {
+    process(false);
+  };
+
+  void calculateBeat()
+  {
     uint32_t now = millis();
+
+    uint32_t nominalBeatDuration = 60000/BPM;
+
+    uint32_t loopDurationMillis = nominalBeatDuration * 16;
 
     if( now - loopStartMillis > loopDurationMillis)
       loopStartMillis = now;
 
-    int32_t beat = ((now - loopStartMillis) * beatsPerLoop)/loopDurationMillis;
+    beat = ((now - loopStartMillis) * beatsPerLoop)/loopDurationMillis;
 
-    if( beat == lastBeat)
+  };
+
+  // called from loop() above but also from the web stream handler
+  void process(bool force)
+  {
+  
+    processSettings();
+
+    calculateBeat();
+
+    if( beat == lastBeat && ! force)
       return;
  
     lastBeat = beat;
-    process();
-  };
-
-  void process()
-  {
-  
-  uint32_t now = millis();
-
-    if( now - loopStartMillis > loopDurationMillis)
-      loopStartMillis = now;
-
-    int32_t beat = ((now - loopStartMillis) * beatsPerLoop)/loopDurationMillis;
 
     if( fb == NULL )
     {
       Serial.println("Tune - no frame!");
       return;
     }
-
-   
-
 
     for( int t = 0; t < TRACKS; t ++ )
     {
@@ -136,5 +160,35 @@ class Tune{
     }
   };
 
+  void processSettings()
+  {
+    beatPerLoopSetting.processSetting();
+    beatPerLoopSetting.drawBoxes();
+    beatsPerLoop = beatPerLoopSetting.value;
+
+    BPMSetting.processSetting();
+    BPMSetting.drawBoxes();
+    BPM = BPMSetting.value;
+
+    scaleSetting.processSetting();
+    scaleSetting.drawBoxes();
+    int s = scaleSetting.value;
+
+    switch(s)
+    {
+      case 0:
+        setScales(2,1,bluesCMajorScale, sizeof(bluesCMajorScale));
+        break;
+      case 1:
+        setScales(2,1,bluesCMinorScale, sizeof(bluesCMinorScale));
+        break;
+      case 2:
+      default:
+        setScales(2,1,straightScale,sizeof(straightScale));
+        break;
+    }
+    
+  
+  }
 
 };
