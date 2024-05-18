@@ -29,7 +29,7 @@ uint8_t straightScale[] = {0,1,2,3,4,5,6,7,8,9,10,11 };
 
 // settings lookup values
 int bpls[] = {16,32,64};
-int bpms[] = {90,95,100,105,110,115,120,125,130,135};
+int bpms[] = {90,95,100,105,110,115,120,125,130,135, 140, 145, 150, 155, 160,165};
 int scales[] = {0,1,2};
 
 uint8_t bassNotes[12];  // 20 to 33 is a known good range
@@ -64,7 +64,7 @@ class Tune{
   int settingWidth = 5;
 
   Setting beatPerLoopSetting =  Setting("beatsPerLoop", settingX, y0+2*h+2*yspace, settingWidth,h,0xf00f,3,bpls);
-  Setting BPMSetting =          Setting("BPM",          settingX, y0+h+yspace,     settingWidth,h,0x00ff,10,bpms);
+  Setting BPMSetting =          Setting("BPM",          settingX, y0+h+yspace,     settingWidth,h,0x00ff,16,bpms);
   Setting scaleSetting =        Setting("scale",        settingX, y0,              settingWidth,h,0xff00,3,scales);
 
   double BPM = 120;
@@ -74,6 +74,8 @@ class Tune{
   uint32_t beatDurationMillis = 8000;
   uint32_t loopStartMillis = 0;
   int32_t beat = 0;
+
+  int lastSetScale = 0;
 
 
   Tune()
@@ -154,9 +156,11 @@ class Tune{
       tracks[t].processBeat(beat, beatsPerLoop);
     }
 
+    // dont' draw on the bitmap before we've analysed it
+    //TODO - what if we reuse this bitmap ? Hm
     for( int t = 0; t < TRACKS; t ++ )
     {
-      tracks[t].drawBoxes();
+      tracks[t].drawBoxes(beat, beatsPerLoop);
     }
   };
 
@@ -174,20 +178,28 @@ class Tune{
     scaleSetting.drawBoxes();
     int s = scaleSetting.value;
 
-    switch(s)
+
+    int bassOctave = 2;
+    int leadOctave = 4;
+
+    if( s != lastSetScale )
     {
-      case 0:
-        setScales(2,1,bluesCMajorScale, sizeof(bluesCMajorScale));
-        break;
-      case 1:
-        setScales(2,1,bluesCMinorScale, sizeof(bluesCMinorScale));
-        break;
-      case 2:
-      default:
-        setScales(2,1,straightScale,sizeof(straightScale));
-        break;
+      switch(s)
+      {
+        case 0:
+          setScales(bassOctave,leadOctave,bluesCMajorScale, sizeof(bluesCMajorScale));
+          break;
+        case 1:
+          setScales(bassOctave,leadOctave,bluesCMinorScale, sizeof(bluesCMinorScale));
+          break;
+        case 2:
+        default:
+          setScales(bassOctave,leadOctave,straightScale,sizeof(straightScale));
+          break;
+      }
+      
+     lastSetScale = s;   
     }
-    
   
   }
 

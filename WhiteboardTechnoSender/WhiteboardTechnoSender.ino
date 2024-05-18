@@ -100,10 +100,10 @@ void setup()
   {
     MIDI.sendNoteOn(n, 127, 3);    
     Serial.println(n);
-    delay(1000);
+    delay(300);
   }
-  */
-
+  
+*/
   
 
 }

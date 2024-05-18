@@ -40,19 +40,28 @@ Track(int _midiChannel, int _x1, int _y1, int _width, int _height, uint32_t _col
 
 };
 
-void drawBoxes()
+void drawBoxes(int32_t beat, int32_t beatsPerLoop)
 {
  if( drawMarkers )
   {
     //Serial.println("drawing markers");
     drawRect( x1+1, y1+1, width-1, height-1, colour);
+
+    double x = map(beat, 0, beatsPerLoop-1, x1, x1 + width );
+
+    for( int b = 0; b < beatsPerLoop; b ++)
+    {
+      double x = map(b, 0, beatsPerLoop-1, x1, x1 + width );
+      drawRect( x, y1+1, 1, b==beat?5:3, colour);
+
+    }
   }
 }
 void processBeat( int32_t beat, int32_t beatsPerLoop)//, Frame frame )
 {
  
   bool newNotes[MAX_NOTES];
-  bool velocities[MAX_NOTES];
+  uint8_t velocities[MAX_NOTES];
 
   double x = map(beat, 0, beatsPerLoop-1, x1, x1 + width );
 
@@ -112,7 +121,7 @@ void processBeat( int32_t beat, int32_t beatsPerLoop)//, Frame frame )
 
         inBlack = false;
         int h = y-blackStart;
-        int velocity = map(h,0,height/8,50,127); // full velocity at 1/8 of panel height
+        int velocity = 127; //TODO map(h,0,height/8,50,127); // full velocity at 1/8 of panel height
         int centerY = (y+blackStart)/2;
         int pos = ((centerY - y1) * numNoteNumbers)  / height;  // y==0 is at the top here
         pos = numNoteNumbers - pos;
@@ -171,6 +180,12 @@ void sendNote( int noteNumber, bool start, int velocity)
   buf[2]=noteNumbers[noteNumber];
   buf[3]=velocity;
 
+/*
+  if( start )
+    Serial.printf("Start channel %d note %d vel %d\n", midiChannel, buf[2], velocity);
+  else
+    Serial.printf("... stop channel %d note %d vel %d\n", midiChannel, buf[2], velocity);
+*/
   sendI2C(I2C_NANO, buf, 4);
 };
 
