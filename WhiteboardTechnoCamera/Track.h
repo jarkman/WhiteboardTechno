@@ -57,7 +57,7 @@ void drawBoxes(int32_t beat, int32_t beatsPerLoop)
     }
   }
 }
-void processBeat( int32_t beat, int32_t beatsPerLoop)//, Frame frame )
+void processBeat( int32_t beat, int32_t beatsPerLoop,int autodrum)//, Frame frame )
 {
  
   bool newNotes[MAX_NOTES];
@@ -67,6 +67,9 @@ void processBeat( int32_t beat, int32_t beatsPerLoop)//, Frame frame )
 
   for( int n = 0; n < numNoteNumbers; n ++)
     newNotes[n] = false;
+
+  if( autodrum >= 0 )
+    newNotes[autodrum]=true;
 
   int cv = -1;
 

@@ -27,10 +27,16 @@ uint8_t bluesCMinorScale[] = {0, 3, 5, 6, 7, 10 };
 
 uint8_t straightScale[] = {0,1,2,3,4,5,6,7,8,9,10,11 };
 
+#define AUTODRUM_OFF 0
+#define AUTODRUM_SIMPLE 1
+#define AUTODRUM_MAX 2
+
+
 // settings lookup values
 int bpls[] = {16,32,64};
 int bpms[] = {90,95,100,105,110,115,120,125,130,135, 140, 145, 150, 155, 160,165};
 int scales[] = {0,1,2};
+int autodrums[] = {AUTODRUM_OFF,AUTODRUM_SIMPLE,AUTODRUM_MAX};
 
 uint8_t bassNotes[12];  // 20 to 33 is a known good range
 uint8_t leadNotes[12];  // 24 to 37 is good ? 
@@ -63,10 +69,11 @@ class Tune{
   int settingX = 13;
   int settingWidth = 5;
 
-  Setting beatPerLoopSetting =  Setting("beatsPerLoop", settingX, y0+2*h+2*yspace, settingWidth,h,0xf00f,3,bpls);
-  Setting BPMSetting =          Setting("BPM",          settingX, y0+h+yspace,     settingWidth,h,0x00ff,16,bpms);
-  Setting scaleSetting =        Setting("scale",        settingX, y0,              settingWidth,h,0xff00,3,scales);
-
+  Setting autodrumSetting =     Setting("autodrum",     settingX, y0+2*h+2*yspace+h/2,  settingWidth,h/2,0xff00,3,scales);
+  Setting beatPerLoopSetting =  Setting("beatsPerLoop", settingX, y0+2*h+2*yspace,      settingWidth,h/2,0xf00f,3,bpls);
+  Setting BPMSetting =          Setting("BPM",          settingX, y0+h+yspace,          settingWidth,h,0x00ff,16,bpms);
+  Setting scaleSetting =        Setting("scale",        settingX, y0,                   settingWidth,h,0xff00,3,scales);
+ 
   double BPM = 120;
   //double nominalBeats = 64;
   int lastBeat = -1;
@@ -76,6 +83,8 @@ class Tune{
   int32_t beat = 0;
 
   int lastSetScale = 0;
+
+  int autodrum = AUTODRUM_OFF;
 
 
   Tune()
@@ -151,9 +160,35 @@ class Tune{
       return;
     }
 
+    int beatIn4Space = beat * 16 / beatsPerLoop;  // 0 to 15
+    int beatOfBar = beatIn4Space%4; // 0 to 3
+
     for( int t = 0; t < TRACKS; t ++ )
     {
-      tracks[t].processBeat(beat, beatsPerLoop);
+      int autodrumNote = -1;
+
+      if( t == 0 )
+      {
+        switch( autodrum )
+        {
+          case AUTODRUM_OFF:
+            break;
+          case AUTODRUM_SIMPLE:
+            if(beatOfBar == 0)
+              autodrumNote = 0; // bass
+            break;
+          case AUTODRUM_MAX:
+            if(beatOfBar == 0)
+              autodrumNote = 0; // bass
+            else
+              autodrumNote = 4; // closed snare
+            break;
+          default:
+            break;
+        }
+      }
+
+      tracks[t].processBeat(beat, beatsPerLoop,autodrumNote);
     }
 
     // dont' draw on the bitmap before we've analysed it
@@ -169,6 +204,10 @@ class Tune{
     beatPerLoopSetting.processSetting();
     beatPerLoopSetting.drawBoxes();
     beatsPerLoop = beatPerLoopSetting.value;
+
+    autodrumSetting.processSetting();
+    autodrumSetting.drawBoxes();
+    autodrum = autodrumSetting.value;
 
     BPMSetting.processSetting();
     BPMSetting.drawBoxes();
