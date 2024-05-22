@@ -20,14 +20,14 @@ int height;
 uint32_t colour;
 int numNoteNumbers;
 uint8_t *noteNumbers;
-// something about quantisation
+bool alwaysNew;
 
 
 #define MAX_NOTES 100
 bool notes[MAX_NOTES];
 int lastCv = -1;
 
-Track(int _midiChannel, int _x1, int _y1, int _width, int _height, uint32_t _colour, int _numNoteNumbers, uint8_t *_noteNumbers)
+Track(int _midiChannel, int _x1, int _y1, int _width, int _height, uint32_t _colour, int _numNoteNumbers, uint8_t *_noteNumbers, bool _alwaysNew)
 {
   midiChannel = _midiChannel;
   x1 = _x1;
@@ -37,6 +37,7 @@ Track(int _midiChannel, int _x1, int _y1, int _width, int _height, uint32_t _col
   colour = _colour;
   numNoteNumbers = _numNoteNumbers;
   noteNumbers = _noteNumbers;
+  alwaysNew = _alwaysNew;
 
 };
 
@@ -68,7 +69,7 @@ void processBeat( int32_t beat, int32_t beatsPerLoop,int autodrum)//, Frame fram
   for( int n = 0; n < numNoteNumbers; n ++)
     newNotes[n] = false;
 
-  if( autodrum >= 0 )
+  if( autodrum >= 0 && autodrum < numNoteNumbers )
     newNotes[autodrum]=true;
 
   int cv = -1;
@@ -143,18 +144,33 @@ void processBeat( int32_t beat, int32_t beatsPerLoop,int autodrum)//, Frame fram
         }
 
         if( drawMarkers)
-          drawMarker(x, centerY, colour);
+          drawMarker(x, centerY, 0xffff-colour);
       }
     
     }
   }
 
-  for( int n = 0; n < numNoteNumbers; n ++)
+  if( alwaysNew ) // for drums, do a note on every beat
   {
-    if( ! notes[n] && newNotes[n])
-      sendNote(n, true, velocities[n]);
-    else if( notes[n] && ! newNotes[n])
-      sendNote(n, false,127);
+    for( int n = 0; n < numNoteNumbers; n ++)
+    {
+      if( ! notes[n] )
+        sendNote(n, false,127);
+        
+      if( notes[n] )
+        sendNote(n, true, velocities[n]);
+        
+    }
+  }
+  else
+  {
+    for( int n = 0; n < numNoteNumbers; n ++)
+    {
+      if( ! notes[n] && newNotes[n])
+        sendNote(n, true, velocities[n]);
+      else if( notes[n] && ! newNotes[n])
+        sendNote(n, false,127);
+    }
   }
 
   for( int n = 0; n < numNoteNumbers; n ++)
@@ -194,8 +210,6 @@ void sendNote( int noteNumber, bool start, int velocity)
 
 void sendCv( int cv)
 {
-
-  return;
 
   byte buf[4];
   buf[0]=CV_OP;

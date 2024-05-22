@@ -116,27 +116,27 @@ void loop()
   
     uint32_t b = notes.shift();
 
-    Serial.print("popped "); Serial.println(b, HEX);
+    //Serial.print("popped "); Serial.println(b, HEX);
 
     byte *buf = (byte*) &b;
 
     if( buf[0] == MIDI_START_NOTE_OP)
     {
 
-      Serial.print("On ch ");
-      Serial.print(buf[1]);
-      Serial.print(" note ");
-      Serial.println(buf[2]);
-      Serial.print(" vel ");
-      Serial.println(buf[3]);
+      //Serial.print("On ch ");
+      //Serial.print(buf[1]);
+      //Serial.print(" note ");
+      //Serial.println(buf[2]);
+      //Serial.print(" vel ");
+      //Serial.println(buf[3]);
       MIDI.sendNoteOn(buf[2], buf[3], buf[1]);    
     }
     else if( buf[0] == MIDI_STOP_NOTE_OP)
     {
-      Serial.print("Off ch ");
-      Serial.print(buf[1]);
-      Serial.print(" note ");
-      Serial.println(buf[2]);
+      //Serial.print("Off ch ");
+      //Serial.print(buf[1]);
+      //Serial.print(" note ");
+      //Serial.println(buf[2]);
       MIDI.sendNoteOff(buf[2], buf[3], buf[1]);    
     } 
     else if( buf[0] == CV_OP)
@@ -144,10 +144,11 @@ void loop()
       
       // buf[1] is the midi channel (1,2,3)
       // buf[2] is the CV value, 0 to 254. 255 means no note, set gate to 0
+      Serial.print("CV ch "); Serial.print((int)buf[1]); Serial.print(" val "); Serial.println((int)buf[2]);
       switch(buf[1])
       {
         case 1:
-          if( buf[2]=255)
+          if( buf[2]==255)
           {
             digitalWrite( GATE_OUT_1_PIN, 0 );    
           }
@@ -158,7 +159,7 @@ void loop()
           }
           break;
        case 2:
-          if( buf[2]=255)
+          if( buf[2]==255)
           {
             digitalWrite( GATE_OUT_2_PIN, 0 );    
           }
@@ -169,7 +170,7 @@ void loop()
           }
           break;
        case 3:
-          if( buf[2]=255)
+          if( buf[2]==255)
           {
             digitalWrite( GATE_OUT_3_PIN, 0 );    
           }

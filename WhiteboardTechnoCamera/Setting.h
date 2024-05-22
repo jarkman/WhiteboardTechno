@@ -82,7 +82,9 @@ void processSetting( )
   bool inBlack = false;
   int blackStart = -1;
 
-  int end = 5; // a bit of space at the ends to allow for width of markers
+  int bestPosY = -1;
+
+  int end = 3; // a bit of space at the ends to allow for width of markers
 
   // scan the vertical line at x
     for(int y = y1; y < y1 + height+1; y ++) // do 1 extra px to let is finish the last bit
@@ -134,12 +136,12 @@ void processSetting( )
           {
             bestPos = pos;
             bestVelocity = velocity;
+            bestPosY = posY;
 
-          //Serial.printf("found setting %s value %d \n", name, pos);
+          //Serial.printf("found setting %s pos %d \n", name, pos);
         }
 
-        if( drawMarkers)
-          drawMarker(x, posY, colour);
+       
       }
     
     }
@@ -152,6 +154,9 @@ void processSetting( )
       Serial.printf("%s : %d (was %d)\n", name, newValue, value);
 
     value = newValue;
+
+    if( drawMarkers)
+         drawMarker(x, bestPosY, colour);
   }
   else
   {

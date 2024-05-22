@@ -54,7 +54,7 @@ class Tune{
   
   #define TRACKS 3
 
-  int y0 = 14;
+  int y0 = 12;
   int ymax = 108;
   int yspace = 2;
   int h = (ymax-y0-2*yspace)/3;
@@ -62,18 +62,32 @@ class Tune{
   int x0 = 21;
   int xmax = 148;
 
-  Track tracks[TRACKS] = {Track(RD6_CHANNEL,x0, y0+2*h+2*yspace,   xmax-x0,h, 0x0f00, 5, (uint8_t*)drumNotes), 
-                          Track(TD3_CHANNEL,x0, y0+h+yspace,       xmax-x0,h, 0xf000, 12, (uint8_t*)bassNotes), 
-                          Track(3,          x0, y0,               xmax-x0,h,  0x000f, 12, (uint8_t*)leadNotes)};
+  Track tracks[TRACKS] = {Track(RD6_CHANNEL,x0, y0+2*h+2*yspace,   xmax-x0,h, 0x0f00, 5, (uint8_t*)drumNotes, true), 
+                          Track(TD3_CHANNEL,x0, y0+h+yspace,       xmax-x0,h, 0xf000, 12, (uint8_t*)bassNotes, false), 
+                          Track(3,          x0, y0,               xmax-x0,h,  0x000f, 12, (uint8_t*)leadNotes, false)};
 
-  int settingX = 13;
-  int settingWidth = 5;
+  int settingX = 10;
+  int settingWidth = 4;
 
-  Setting autodrumSetting =     Setting("autodrum",     settingX, y0+2*h+2*yspace+h/2,  settingWidth,h/2,0xff00,3,scales);
-  Setting beatPerLoopSetting =  Setting("beatsPerLoop", settingX, y0+2*h+2*yspace,      settingWidth,h/2,0xf00f,3,bpls);
-  Setting BPMSetting =          Setting("BPM",          settingX, y0+h+yspace,          settingWidth,h,0x00ff,16,bpms);
-  Setting scaleSetting =        Setting("scale",        settingX, y0,                   settingWidth,h,0xff00,3,scales);
+  int h3 = h/2;
+  int h16 = h;
+
+  int ys1 = y0 + yspace;
+
+  Setting scaleSetting =        Setting("scale",        settingX, ys1, settingWidth, h3,0xff00,3,scales);
+  int ys2 = ys1 + h3 + yspace;
+
+  Setting BPMSetting =          Setting("BPM",          settingX, ys2, settingWidth, h16,0x00ff,16,bpms);
+  int ys3 = ys2 + h16 + yspace;
+  
+  Setting beatPerLoopSetting =  Setting("beatsPerLoop", settingX, ys3, settingWidth, h3, 0xf00f,3,bpls);
+  int ys4 = ys3 + h3 + yspace;
  
+
+  Setting autodrumSetting =     Setting("autodrum",     settingX, ys4, settingWidth, h3, 0xff00,3,scales);
+ 
+
+  
   double BPM = 120;
   //double nominalBeats = 64;
   int lastBeat = -1;
