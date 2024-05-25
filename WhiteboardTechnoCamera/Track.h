@@ -208,6 +208,17 @@ void sendNote( int noteNumber, bool start, int velocity)
   sendI2C(I2C_NANO, buf, 4);
 };
 
+void sendDMX(byte address, byte r, byte g, byte b)
+{
+  byte buf[4];
+ 
+  buf[0]=address;
+  buf[1]=r;
+  buf[2]=g;
+  buf[3]=b;
+  sendI2C(I2C_DMX, buf, 4);
+};
+
 void sendCv( int cv)
 {
 
