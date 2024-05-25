@@ -101,6 +101,8 @@ void processBeat( int32_t beat, int32_t beatsPerLoop,int autodrum)//, Frame fram
   bool inBlack = false;
   int blackStart = -1;
 
+  byte colourWheel = 0;
+
   if( ! allWhite )
   {
   // scan the vertical line at x
@@ -131,6 +133,8 @@ void processBeat( int32_t beat, int32_t beatsPerLoop,int autodrum)//, Frame fram
         pos = numNoteNumbers - pos;
 
         cv =   ((centerY - y1) * CV_MAX) / height;
+
+        colourWheel = cv;
 
         if( pos < 0 || pos > numNoteNumbers)
         {
@@ -178,6 +182,9 @@ void processBeat( int32_t beat, int32_t beatsPerLoop,int autodrum)//, Frame fram
 
   if( cv != lastCv )
     sendCv(cv);
+
+  sendWheelDMX(1,colourWheel);
+  sendWheelDMX(2,255-colourWheel);
 };
 
 
@@ -208,6 +215,40 @@ void sendNote( int noteNumber, bool start, int velocity)
   sendI2C(I2C_NANO, buf, 4);
 };
 
+void sendWheelDMX(byte address, byte WheelPos) // use wheel (ie, hue, kind of) so we get roughly constant brightness so we don't bemuse the camera
+{
+  if( WheelPos >= 255 )
+    WheelPos = 254;
+
+  if( WheelPos == 0 )
+    WheelPos = 1;
+
+  Serial.printf("wheel %x\n", WheelPos);
+  byte r,g,b;
+  switch(WheelPos >> 5)
+  {
+    case 0:
+      r=31- WheelPos % 32;   //Red down
+      g=WheelPos % 32;      // Green up
+      b=0;                  //blue off
+      break; 
+    case 1:
+      g=31- WheelPos % 32;  //green down
+      b=WheelPos % 32;      //blue up
+      r=0;                  //red off
+      break; 
+    case 2:
+      b=31- WheelPos % 32;  //blue down 
+      r=WheelPos % 32;      //red up
+      g=0;                  //green off
+      break; 
+  }
+  r = r<<4;
+  g = g<<4;
+  b = b<< 4;
+  sendDMX(address,r,g,b);
+}
+
 void sendDMX(byte address, byte r, byte g, byte b)
 {
   byte buf[4];
@@ -216,6 +257,8 @@ void sendDMX(byte address, byte r, byte g, byte b)
   buf[1]=r;
   buf[2]=g;
   buf[3]=b;
+
+  Serial.printf("SendDMX %d  %d %d %d\n", address, r, g, b);
   sendI2C(I2C_DMX, buf, 4);
 };
 

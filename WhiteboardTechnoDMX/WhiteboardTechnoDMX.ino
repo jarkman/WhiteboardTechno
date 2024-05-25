@@ -46,21 +46,46 @@ byte data[DMX_PACKET_SIZE];
   Monitor at a regular interval. */
 unsigned long lastUpdate = millis();
 
+
+// A4 SDA
+// A5 SCL
+
+#define MY_SDA_PIN 25
+#define MY_SCL_PIN 18
+
+// on Grove cable
+// SDA yellow  25
+// SCL white   18
+// VCC red (unused)
+// GND black
+
+
+
 void setup() {
   /* Start the serial connection back to the computer so that we can log
     messages to the Serial Monitor. Lets set the baud rate to 115200. */
   Serial.begin(115200);
 
   Serial.println("Setup begin");
+  Serial.println("Wire.begin");
 
- Wire.begin(I2C_DMX);                // join i2c bus with address #4
+  Wire.setPins(MY_SCL_PIN, MY_SDA_PIN); // these are swapped but it works
+                                        // very odd indeed
+
+  Wire.begin(I2C_DMX);                // join i2c bus with address #4
+  
+  Serial.println("Wire.onReceive");
+
   Wire.onReceive(receiveEvent); // register event
+
+  Serial.println("pinMode");
 
   pinMode(RS485_SE_PIN, OUTPUT);
   digitalWrite(RS485_SE_PIN, HIGH);
 
   pinMode(PIN_5V_EN, OUTPUT);
   digitalWrite(PIN_5V_EN, HIGH);
+
 
   /* Now we will install the DMX driver! We'll tell it which DMX port to use,
     what device configuration to use, and what DMX personalities it should have.
@@ -87,6 +112,8 @@ void setup() {
      Serial.println("Set pin");
     
   dmx_set_pin(dmxPort, transmitPin, receivePin, enablePin);
+
+  Serial.println("Set pin done");
 }
 
 void setDmxData(byte address, byte r, byte g, byte b)
@@ -109,8 +136,8 @@ void setDmxData(byte address, byte r, byte g, byte b)
 
 void loop() {
  
- 
- while( ! notes.isEmpty())
+ delay(1);
+ while(! notes.isEmpty())
   {
   
     uint32_t b = notes.shift();
@@ -131,34 +158,36 @@ void loop() {
   
     
 
-    Serial.println("dmx_write");
+    //Serial.println("dmx_write");
     
     dmx_write(dmxPort, data, DMX_PACKET_SIZE);
 
     /* Log our changes to the Serial Monitor. */
     Serial.printf("Sending DMX 0x%02X\n", data[1]);
     
-  }
 
-   Serial.println("dmx_send_num");
+
+   //Serial.println("dmx_send_num");
     
   /* Now we can transmit the DMX packet! */
   dmx_send_num(dmxPort, DMX_PACKET_SIZE);
 
   /* We can do some other work here if we want. */
 
- Serial.println("dmx_wait_sent");
+ //Serial.println("dmx_wait_sent");
     
   /* If we have no more work to do, we will wait until we are done sending our
     DMX packet. */
   dmx_wait_sent(dmxPort, DMX_TIMEOUT_TICK);
 
-   Serial.println("dmx_wait_sent done");
+   //Serial.println("dmx_wait_sent done");
+  }
     
 }
 
 void receiveEvent(int howMany)
 {
+  //Serial.println("receiveEvent");
   uint32_t b;
   byte *buf = (byte*) &b;
 
@@ -177,3 +206,4 @@ void receiveEvent(int howMany)
   }
   
 }
+
