@@ -4,6 +4,8 @@
 // partition scheme default (4Mb with spiffs)
 // PSRAM enabled
 
+// add https://m5stack.oss-cn-shenzhen.aliyuncs.com/resource/arduino/package_m5stack_index.json to board manager
+
 // derived from the sta.ino sample for TimerCameraX
 
 //#include "esp_camera.h"
