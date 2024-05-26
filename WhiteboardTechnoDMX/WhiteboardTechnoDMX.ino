@@ -1,7 +1,9 @@
 // runs on a Lilygo T-CAN485 https://github.com/Xinyuan-LilyGO/T-CAN485/tree/main
+// add https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+// to board manager
 // select ESP32 Dev Module
 
-#include <esp_dmx.h> //esp_dmx by Mitch Weisbrod
+#include <esp_dmx.h> //esp_dmx by Mitch Weisbrod 4.1.0
 #include "config.h"
 #include <Wire.h>
 #include "I2CConstants.h"

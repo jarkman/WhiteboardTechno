@@ -1,11 +1,10 @@
-// build for M5TimerCam
 
-
-// derived from the sta.ino sample for TimerCameraX
-
+// runs on an M5Stack TimerCamera X
 // build for M5UnitCam
 // partition scheme default (4Mb with spiffs)
 // PSRAM enabled
+
+// derived from the sta.ino sample for TimerCameraX
 
 //#include "esp_camera.h"
 

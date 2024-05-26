@@ -3,7 +3,7 @@
 
 #include <Wire.h>
 #include "I2CConstants.h"
-#include "MIDI.h"
+#include "MIDI.h"  // MIDI LIbrary by Francois Bets, Iathoub 5.0.2
 
 // build for Arduino Nano
 // Processor 328P Old Bootloader
