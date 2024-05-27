@@ -42,8 +42,12 @@
 //#define CAMERA_MODEL_DFRobot_Romeo_ESP32S3 // Has PSRAM
 #include "camera_pins.h"
 
-const char* ssid     = "beetle";
-const char* password = "nomplasm";
+const char* ssid     = "no";
+const char* password = "no";
+
+const char* apSsid     = "techno";
+const char* apPassword = "techno";
+
 
 WiFiServer server(80);
 static void jpegStream(WiFiClient* client);
@@ -52,6 +56,8 @@ static void jpegStream(WiFiClient* client);
 Tune tune;
 
 bool doWifi = true;
+bool doWifiAP = true;
+
 bool drawMarkers = false;
 
 bool streamRunning = false;
@@ -87,23 +93,48 @@ Serial.println("Starting");
 
   if( doWifi )
   {
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, password);
-    WiFi.setSleep(false);
-    Serial.println("");
-    Serial.print("Connecting to ");
-    Serial.println(ssid);
-    // Wait for connection
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
+    if( doWifiAP )
+    {
 
-    Serial.println("");
-    Serial.print("Connected to ");
-    Serial.println(ssid);
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
+      const IPAddress apIP = IPAddress(192, 168, 4, 1);
+
+      WiFi.mode(WIFI_AP);
+      WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
+
+      if (!WiFi.softAP(apSsid, apPassword)) {
+        Serial.println("Soft AP creation failed.");
+        //return;
+      }
+
+      Serial.println("AP SSID:");
+      Serial.println(apSsid);
+      Serial.println("AP PASSWORD:");
+      Serial.println(apPassword);
+
+      IPAddress IP = WiFi.softAPIP();
+      Serial.print("AP IP address: ");
+      Serial.println(IP);
+    }
+    else
+    {
+      WiFi.mode(WIFI_STA);
+      WiFi.begin(ssid, password);
+      WiFi.setSleep(false);
+      Serial.println("");
+      Serial.print("Connecting to ");
+      Serial.println(ssid);
+      // Wait for connection
+      while (WiFi.status() != WL_CONNECTED) {
+          delay(500);
+          Serial.print(".");
+      }
+
+      Serial.println("");
+      Serial.print("Connected to ");
+      Serial.println(ssid);
+      Serial.print("IP address: ");
+      Serial.println(WiFi.localIP());
+    }
     server.begin();
   }
 }

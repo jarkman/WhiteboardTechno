@@ -13,6 +13,7 @@ class Track {
 public:
 
 int midiChannel = 0;
+int dmxAddress;
 int x1;
 int y1;
 int width;
@@ -27,9 +28,10 @@ bool alwaysNew;
 bool notes[MAX_NOTES];
 int lastCv = -1;
 
-Track(int _midiChannel, int _x1, int _y1, int _width, int _height, uint32_t _colour, int _numNoteNumbers, uint8_t *_noteNumbers, bool _alwaysNew)
+Track(int _midiChannel, int _dmxAddress, int _x1, int _y1, int _width, int _height, uint32_t _colour, int _numNoteNumbers, uint8_t *_noteNumbers, bool _alwaysNew)
 {
   midiChannel = _midiChannel;
+  dmxAddress = _dmxAddress;
   x1 = _x1;
   y1 = _y1;
   width = _width;
@@ -152,8 +154,8 @@ void processBeat( int32_t beat, int32_t beatsPerLoop,int autodrum)//, Frame fram
         {
           newNotes[pos] = true;
           velocities[pos] = velocity;
-          if( midiChannel == 2 )
-            Serial.printf("found note channel %d beat %d x %d at pos %d noteNumber %d\n",  (int) midiChannel, (int) beat, (int) x, (int) pos, (int) noteNumbers[pos]);
+          //if( midiChannel == 2 )
+          //  Serial.printf("found note channel %d beat %d x %d at pos %d noteNumber %d\n",  (int) midiChannel, (int) beat, (int) x, (int) pos, (int) noteNumbers[pos]);
         }
 
         if( drawMarkers)
@@ -192,8 +194,9 @@ void processBeat( int32_t beat, int32_t beatsPerLoop,int autodrum)//, Frame fram
   if( cv != lastCv )
     sendCv(cv);
 
-  sendWheelDMX(1,colourWheel);
-  sendWheelDMX(2,255-colourWheel);
+  if( dmxAddress > 0 )
+    sendWheelDMX(dmxAddress,colourWheel);
+ 
 };
 
 
@@ -226,13 +229,31 @@ void sendNote( int noteNumber, bool start, int velocity)
 
 void sendWheelDMX(byte address, byte WheelPos) // use wheel (ie, hue, kind of) so we get roughly constant brightness so we don't bemuse the camera
 {
+  //Serial.printf("wheel %d  ", WheelPos);
+
+    byte r,g,b;
+
+  WheelPos = 255 - WheelPos;
+  if(WheelPos < 85) {
+    r = 255 - WheelPos * 3; g = 0; b = WheelPos * 3;
+  }
+  if(WheelPos < 170) {
+    WheelPos -= 85;
+    r = 0; g = WheelPos * 3; b = 255 - WheelPos * 3;
+  }
+  WheelPos -= 170;
+  r = WheelPos * 3; g = 255 - WheelPos * 3; b = 0;
+
+  sendDMX(address,r,g,b);
+
+/*
   if( WheelPos >= 255 )
     WheelPos = 254;
 
   if( WheelPos == 0 )
     WheelPos = 1;
 
-  ///Serial.printf("wheel %x\n", WheelPos);
+  
   byte r,g,b;
   switch(WheelPos >> 5)
   {
@@ -256,6 +277,8 @@ void sendWheelDMX(byte address, byte WheelPos) // use wheel (ie, hue, kind of) s
   g = g<<4;
   b = b<< 4;
   sendDMX(address,r,g,b);
+
+  */
 }
 
 void sendDMX(byte address, byte r, byte g, byte b)

@@ -63,9 +63,9 @@ class Tune{
   int x0 = 21;
   int xmax = 148;
 
-  Track tracks[TRACKS] = {Track(RD6_CHANNEL,x0, y0+2*hTune+2*yspace,   xmax-x0,hTune, 0x0f00, 5, (uint8_t*)drumNotes, true), 
-                          Track(TD3_CHANNEL,x0, y0+hTune+yspace,       xmax-x0,hTune, 0xf000, 12, (uint8_t*)bassNotes, false), 
-                          Track(3,          x0, y0,                    xmax-x0,hTune,  0x000f, 12, (uint8_t*)leadNotes, false)};
+  Track tracks[TRACKS] = {Track(RD6_CHANNEL,-1,x0, y0+2*hTune+2*yspace,   xmax-x0,hTune, 0x0f00, 5, (uint8_t*)drumNotes, true), 
+                          Track(TD3_CHANNEL, 1,x0, y0+hTune+yspace,       xmax-x0,hTune, 0xf000, 12, (uint8_t*)bassNotes, false), 
+                          Track(3,           2,x0, y0,                    xmax-x0,hTune,  0x000f, 12, (uint8_t*)leadNotes, false)};
 
   int settingX = 10;
   int settingWidth = 4;
@@ -148,7 +148,7 @@ class Tune{
   {
     uint32_t now = millis();
 
-    uint32_t nominalBeatDuration = 60000/BPM;
+    uint32_t nominalBeatDuration = (60000/BPM)/4;
 
     uint32_t loopDurationMillis = nominalBeatDuration * 16;
 
