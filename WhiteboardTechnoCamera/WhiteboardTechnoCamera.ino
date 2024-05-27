@@ -52,7 +52,7 @@ static void jpegStream(WiFiClient* client);
 Tune tune;
 
 bool doWifi = true;
-bool drawMarkers = true;
+bool drawMarkers = false;
 
 bool streamRunning = false;
 
@@ -268,7 +268,6 @@ void loop() {
           res = ESP_FAIL;
         } else {
 
-
           processFrame("loop");
          
           logEnd();
@@ -444,7 +443,10 @@ static void bmpStream(WiFiClient* client) {
 
 
             processFrame("stream");
+
+            drawMarkers = true;
             tune.process(true); // to make markers to show
+            drawMarkers = false;
 
             client->print(_STREAM_BOUNDARY);
 

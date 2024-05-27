@@ -46,14 +46,14 @@ void drawBoxes(int32_t beat, int32_t beatsPerLoop)
  if( drawMarkers )
   {
     //Serial.println("drawing markers");
-    drawRect( x1+1, y1+1, width-1, height-1, colour);
+    drawRect( x1-1, y1-1, width+2, height+2, colour);
 
     double x = map(beat, 0, beatsPerLoop-1, x1, x1 + width );
 
     for( int b = 0; b < beatsPerLoop; b ++)
     {
       double x = map(b, 0, beatsPerLoop-1, x1, x1 + width );
-      drawRect( x, y1+1, 1, b==beat?5:3, colour);
+      drawRect( x, y1-1, 1, b==beat?-2:-1, colour);
 
     }
   }
@@ -70,7 +70,15 @@ void processBeat( int32_t beat, int32_t beatsPerLoop,int autodrum)//, Frame fram
     newNotes[n] = false;
 
   if( autodrum >= 0 && autodrum < numNoteNumbers )
+  {
     newNotes[autodrum]=true;
+    Serial.printf("autodrum %d\n", autodrum);
+  }
+  else
+  {
+    if( autodrum != -1 )
+      Serial.printf("bad autodrum %d\n", autodrum);
+  }
 
   int cv = -1;
 
@@ -89,7 +97,7 @@ void processBeat( int32_t beat, int32_t beatsPerLoop,int autodrum)//, Frame fram
 
   bool allWhite = false;
 
-  uint32_t threshold = (maxB+minB)/3;
+  uint32_t threshold = minB + (maxB+minB)/5;
 
   
   if( maxB - minB < threshold )
@@ -144,7 +152,8 @@ void processBeat( int32_t beat, int32_t beatsPerLoop,int autodrum)//, Frame fram
         {
           newNotes[pos] = true;
           velocities[pos] = velocity;
-          //Serial.printf("found note channel %d at pos %d noteNumber %d\n", midiChannel, pos, noteNumbers[pos]);
+          if( midiChannel == 2 )
+            Serial.printf("found note channel %d beat %d x %d at pos %d noteNumber %d\n",  (int) midiChannel, (int) beat, (int) x, (int) pos, (int) noteNumbers[pos]);
         }
 
         if( drawMarkers)
@@ -161,7 +170,7 @@ void processBeat( int32_t beat, int32_t beatsPerLoop,int autodrum)//, Frame fram
       if( ! notes[n] )
         sendNote(n, false,127);
         
-      if( notes[n] )
+      if( newNotes[n] )
         sendNote(n, true, velocities[n]);
         
     }
@@ -223,7 +232,7 @@ void sendWheelDMX(byte address, byte WheelPos) // use wheel (ie, hue, kind of) s
   if( WheelPos == 0 )
     WheelPos = 1;
 
-  Serial.printf("wheel %x\n", WheelPos);
+  ///Serial.printf("wheel %x\n", WheelPos);
   byte r,g,b;
   switch(WheelPos >> 5)
   {
@@ -258,7 +267,7 @@ void sendDMX(byte address, byte r, byte g, byte b)
   buf[2]=g;
   buf[3]=b;
 
-  Serial.printf("SendDMX %d  %d %d %d\n", address, r, g, b);
+  //Serial.printf("SendDMX %d  %d %d %d\n", address, r, g, b);
   sendI2C(I2C_DMX, buf, 4);
 };
 

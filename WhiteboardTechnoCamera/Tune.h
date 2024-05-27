@@ -34,7 +34,7 @@ uint8_t straightScale[] = {0,1,2,3,4,5,6,7,8,9,10,11 };
 
 // settings lookup values
 int bpls[] = {16,32,64};
-int bpms[] = {90,95,100,105,110,115,120,125,130,135, 140, 145, 150, 155, 160,165};
+int bpms[] = {90,100,110,120,130,140, 150,160};
 int scales[] = {0,1,2};
 int autodrums[] = {AUTODRUM_OFF,AUTODRUM_SIMPLE,AUTODRUM_MAX};
 
@@ -57,27 +57,28 @@ class Tune{
   int y0 = 12;
   int ymax = 108;
   int yspace = 2;
-  int h = (ymax-y0-2*yspace)/3;
+  int hTune = (ymax-y0-2*yspace-3)/3;
+  int hSetting = (ymax-y0-2*yspace)/3;
 
   int x0 = 21;
   int xmax = 148;
 
-  Track tracks[TRACKS] = {Track(RD6_CHANNEL,x0, y0+2*h+2*yspace,   xmax-x0,h, 0x0f00, 5, (uint8_t*)drumNotes, true), 
-                          Track(TD3_CHANNEL,x0, y0+h+yspace,       xmax-x0,h, 0xf000, 12, (uint8_t*)bassNotes, false), 
-                          Track(3,          x0, y0,               xmax-x0,h,  0x000f, 12, (uint8_t*)leadNotes, false)};
+  Track tracks[TRACKS] = {Track(RD6_CHANNEL,x0, y0+2*hTune+2*yspace,   xmax-x0,hTune, 0x0f00, 5, (uint8_t*)drumNotes, true), 
+                          Track(TD3_CHANNEL,x0, y0+hTune+yspace,       xmax-x0,hTune, 0xf000, 12, (uint8_t*)bassNotes, false), 
+                          Track(3,          x0, y0,                    xmax-x0,hTune,  0x000f, 12, (uint8_t*)leadNotes, false)};
 
   int settingX = 10;
   int settingWidth = 4;
 
-  int h3 = h/2;
-  int h16 = h;
+  int h3 = hSetting/2;
+  int h16 = hSetting;
 
   int ys1 = y0 + yspace;
 
   Setting scaleSetting =        Setting("scale",        settingX, ys1, settingWidth, h3,0xff00,3,scales);
   int ys2 = ys1 + h3 + yspace;
 
-  Setting BPMSetting =          Setting("BPM",          settingX, ys2, settingWidth, h16,0x00ff,16,bpms);
+  Setting BPMSetting =          Setting("BPM",          settingX, ys2, settingWidth, h16,0x00ff,8,bpms);
   int ys3 = ys2 + h16 + yspace;
   
   Setting beatPerLoopSetting =  Setting("beatsPerLoop", settingX, ys3, settingWidth, h3, 0xf00f,3,bpls);
@@ -95,6 +96,8 @@ class Tune{
   uint32_t beatDurationMillis = 8000;
   uint32_t loopStartMillis = 0;
   int32_t beat = 0;
+  int lastBeatFraction = 0 ;
+  long lastBeatMillis = 0;
 
   int lastSetScale = 0;
 
@@ -140,6 +143,7 @@ class Tune{
     process(false);
   };
 
+
   void calculateBeat()
   {
     uint32_t now = millis();
@@ -149,18 +153,33 @@ class Tune{
     uint32_t loopDurationMillis = nominalBeatDuration * 16;
 
     if( now - loopStartMillis > loopDurationMillis)
+    {
       loopStartMillis = now;
+      
+    }
 
     beat = ((now - loopStartMillis) * beatsPerLoop)/loopDurationMillis;
 
+    /*
+    // fandango to keep beat consistent over change in bpm
+    long millisSinceLastBeat = now-lastBeatMillis;
+    long beatDurationMillis = loopDurationMillis/beatsPerLoop;
+    if( millisSinceLastBeat > beatDurationMillis )
+    {
+      beat = 1 + (lastBeatFraction * beatsPerLoop/64); 
+    
+
+      lastBeatFraction = beat * 64/beatsPerLoop; // beat in 64-note space
+      lastBeatMillis = now;
+    }
+    */
   };
 
   // called from loop() above but also from the web stream handler
   void process(bool force)
   {
   
-    processSettings();
-
+    
     calculateBeat();
 
     if( beat == lastBeat && ! force)
@@ -173,6 +192,8 @@ class Tune{
       Serial.println("Tune - no frame!");
       return;
     }
+
+    processSettings(); // on every beat
 
     int beatIn4Space = beat * 16 / beatsPerLoop;  // 0 to 15
     int beatOfBar = beatIn4Space%4; // 0 to 3

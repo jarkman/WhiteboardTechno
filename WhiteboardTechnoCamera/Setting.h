@@ -40,7 +40,7 @@ void drawBoxes()
  if( drawMarkers )
   {
     //Serial.println("drawing markers");
-    drawRect( x1+1, y1+1, width-1, height-1, colour);
+    drawRect( x1-1, y1-1, width+2, height+2, colour);
   }
 };
 void processSetting( )
@@ -67,7 +67,7 @@ void processSetting( )
 
   bool allWhite = false;
 
-  uint32_t threshold = (maxB+minB)/3;
+  uint32_t threshold = minB + (maxB+minB)/5;
 
   if( maxB - minB < threshold )
   {
@@ -76,7 +76,7 @@ void processSetting( )
     return;
   }
 
-  //Serial.printf("\nmax %d min %d mean %d threshold %d maxB-minB %d, allWhite %d\n", maxB, minB, sum/height, threshold, maxB-minB, allWhite);
+  //Serial.printf("\n%s max %d min %d mean %d threshold %d maxB-minB %d, allWhite %d\n",name, maxB, minB, sum/height, threshold, maxB-minB, allWhite);
   
 
   bool inBlack = false;
@@ -138,7 +138,7 @@ void processSetting( )
             bestVelocity = velocity;
             bestPosY = posY;
 
-          //Serial.printf("found setting %s pos %d \n", name, pos);
+            //Serial.printf("found setting %s pos %d \n", name, pos);
         }
 
        
