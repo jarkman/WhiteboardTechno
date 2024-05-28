@@ -229,7 +229,7 @@ void sendNote( int noteNumber, bool start, int velocity)
 
 void sendWheelDMX(byte address, byte WheelPos) // use wheel (ie, hue, kind of) so we get roughly constant brightness so we don't bemuse the camera
 {
-  //Serial.printf("wheel %d  ", WheelPos);
+  //Serial.printf("wheel %d \n ", WheelPos);
 
     byte r,g,b;
 
@@ -237,48 +237,18 @@ void sendWheelDMX(byte address, byte WheelPos) // use wheel (ie, hue, kind of) s
   if(WheelPos < 85) {
     r = 255 - WheelPos * 3; g = 0; b = WheelPos * 3;
   }
-  if(WheelPos < 170) {
+  else if(WheelPos < 170) {
     WheelPos -= 85;
     r = 0; g = WheelPos * 3; b = 255 - WheelPos * 3;
   }
+  else {
   WheelPos -= 170;
   r = WheelPos * 3; g = 255 - WheelPos * 3; b = 0;
-
-  sendDMX(address,r,g,b);
-
-/*
-  if( WheelPos >= 255 )
-    WheelPos = 254;
-
-  if( WheelPos == 0 )
-    WheelPos = 1;
-
-  
-  byte r,g,b;
-  switch(WheelPos >> 5)
-  {
-    case 0:
-      r=31- WheelPos % 32;   //Red down
-      g=WheelPos % 32;      // Green up
-      b=0;                  //blue off
-      break; 
-    case 1:
-      g=31- WheelPos % 32;  //green down
-      b=WheelPos % 32;      //blue up
-      r=0;                  //red off
-      break; 
-    case 2:
-      b=31- WheelPos % 32;  //blue down 
-      r=WheelPos % 32;      //red up
-      g=0;                  //green off
-      break; 
   }
-  r = r<<4;
-  g = g<<4;
-  b = b<< 4;
+
   sendDMX(address,r,g,b);
 
-  */
+
 }
 
 void sendDMX(byte address, byte r, byte g, byte b)

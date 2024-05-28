@@ -238,7 +238,18 @@ class Tune{
   {
     beatPerLoopSetting.processSetting();
     beatPerLoopSetting.drawBoxes();
+    int oldBeatPos = beat * 64 / beatsPerLoop;
+
+    int oldBeatsPerLoop = beatsPerLoop;
     beatsPerLoop = beatPerLoopSetting.value;
+
+    if( beatsPerLoop != oldBeatsPerLoop )
+    {
+      // keep beat at the same spot on the board
+      beat = oldBeatPos * beatsPerLoop / 64;
+    }
+
+
 
     autodrumSetting.processSetting();
     autodrumSetting.drawBoxes();

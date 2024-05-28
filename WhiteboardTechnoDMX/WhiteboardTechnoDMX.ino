@@ -43,6 +43,7 @@ dmx_port_t dmxPort = 1;  // 2 from https://github.com/Xinyuan-LilyGO/T-CAN485/bl
 
 
 byte data[DMX_PACKET_SIZE];
+#define OUR_DMX_MESSAGE_SIZE 13 // 1 + 2 x 6
 
 /* This variable will allow us to update our packet and print to the Serial
   Monitor at a regular interval. */
@@ -188,17 +189,17 @@ void loop() {
   {
     //Serial.println("dmx_write");
     
-    dmx_write(dmxPort, data, DMX_PACKET_SIZE);
+    dmx_write(dmxPort, data, OUR_DMX_MESSAGE_SIZE);
 
     /* Log our changes to the Serial Monitor. */
-    Serial.printf("Sending DMX    %d %d %d     %d %d %d \n", data[1], data[2], data[3], data[7], data[8], data[9]);
+    //Serial.printf("Sending DMX    %d %d %d     %d %d %d \n", data[1], data[2], data[3], data[7], data[8], data[9]);
     
 
 
    //Serial.println("dmx_send_num");
     
     /* Now we can transmit the DMX packet! */
-    dmx_send_num(dmxPort, DMX_PACKET_SIZE);
+    dmx_send_num(dmxPort, OUR_DMX_MESSAGE_SIZE);
 
     /* We can do some other work here if we want. */
 
